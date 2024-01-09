@@ -221,10 +221,7 @@ impl Hasher<u64> for Xxh64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        tests::Empty,
-        {BuildHasher, Hash},
-    };
+    use crate::{tests::RawBytes, BuildHasher, Hash};
 
     fn default_seed<T: Hash<u64>>(x: T) -> u64 {
         Xxh64DefaultBuildHasher.hash_one(x)
@@ -236,12 +233,12 @@ mod tests {
 
     #[test]
     fn empty_default_seed() {
-        assert_eq!(default_seed(Empty), 0xef46db3751d8e999);
+        assert_eq!(default_seed(RawBytes(b"")), 0xef46db3751d8e999);
     }
 
     #[test]
     fn empty_custom_seed() {
-        assert_eq!(custom_seed(Empty), 0x28e7a0126181c619);
+        assert_eq!(custom_seed(RawBytes(b"")), 0x28e7a0126181c619);
     }
 
     test_bytes_hash! {

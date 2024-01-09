@@ -22,13 +22,47 @@ macro_rules! test_bytes_hash {
             $(
                 #[test]
                 fn $bs() {
-                    assert_eq!($hashfn($crate::tests::RawBytes::new(
-                        stringify!($bs).as_bytes()
-                    )), $hash);
+                    assert_eq!($hashfn($crate::tests::RawBytes(stringify!($bs).as_bytes())), $hash);
                 }
             )*
         }
     )* };
+}
+
+#[macro_export]
+/// Implement [`Hash<u64>`] for types that already implement `::core::hash::Hash`.
+macro_rules! impl_hash {
+    ($($t:ty),* $(,)?) => { $(
+        impl $crate::Hash<u64> for $t {
+            fn hash<H: $crate::Hasher<u64>>(&self, state: &mut H) {
+                struct Wrap<'a, H: $crate::Hasher<u64>>(&'a mut H);
+                impl <H: $crate::Hasher<u64>> ::core::hash::Hasher for Wrap<'_, H> {
+                    #[inline(always)]
+                    fn finish(&self) -> u64 {
+                        H::finish(self.0)
+                    }
+
+                    #[inline(always)]
+                    fn write(&mut self, bytes: &[u8]) {
+                        H::write(self.0, bytes)
+                    }
+
+                    #[cfg(feature = "nightly")]
+                    #[inline(always)]
+                    fn write_length_prefix(&mut self, len: usize) {
+                        H::write_length_prefix(self.0, len)
+                    }
+
+                    #[cfg(feature = "nightly")]
+                    #[inline(always)]
+                    fn write_str(&mut self, s: &str) {
+                        H::write_str(self.0, s)
+                    }
+                }
+                <Self as ::core::hash::Hash>::hash(self, &mut Wrap(state))
+            }
+        }
+    )* }
 }
 
 #[macro_export]
@@ -109,14 +143,11 @@ pub mod xxh64;
 /// A hashable type.
 pub trait Hash<T> {
     /// Feeds this value into the given [`Hasher`].
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: Hasher<T>;
+    fn hash<H: Hasher<T>>(&self, state: &mut H);
 
     /// Feeds a slice of this type into the given [`Hasher`].
-    fn hash_slice<H>(data: &[Self], state: &mut H)
+    fn hash_slice<H: Hasher<T>>(data: &[Self], state: &mut H)
     where
-        H: Hasher<T>,
         Self: Sized,
     {
         for data in data {
@@ -130,6 +161,7 @@ macro_rules! make_hasher_writes {
         #[doc = "Writes a single `"]
         #[doc = stringify!($t)]
         #[doc = "` into this hasher in native byte order."]
+        #[inline]
         fn $ne(&mut self, i: $t) {
             self.write(&i.to_ne_bytes());
         }
@@ -137,6 +169,7 @@ macro_rules! make_hasher_writes {
         #[doc = "Writes a single `"]
         #[doc = stringify!($t)]
         #[doc = "` into this hasher in little endian byte order."]
+        #[inline]
         fn $le(&mut self, i: $t) {
             self.write(&i.to_le_bytes());
         }
@@ -144,6 +177,7 @@ macro_rules! make_hasher_writes {
         #[doc = "Writes a single `"]
         #[doc = stringify!($t)]
         #[doc = "` into this hasher in big endian byte order."]
+        #[inline]
         fn $be(&mut self, i: $t) {
             self.write(&i.to_be_bytes());
         }
@@ -159,6 +193,7 @@ pub trait Hasher<T> {
     fn write(&mut self, bytes: &[u8]);
 
     /// Writes a single `u8` into this hasher.
+    #[inline]
     fn write_u8(&mut self, i: u8) {
         self.write(&[i]);
     }
@@ -172,6 +207,7 @@ pub trait Hasher<T> {
     }
 
     /// Writes a single `i8` into this hasher.
+    #[inline]
     fn write_i8(&mut self, i: i8) {
         self.write(&[i as u8]);
     }
@@ -184,18 +220,14 @@ pub trait Hasher<T> {
         isize { ne: write_isize, le: write_isize_le, be: write_isize_be },
     }
 
-    #[cfg(feature = "nightly")]
     /// Writes a length prefix into this hasher, as part of being prefix-free.
-    ///
-    /// Experimental; see <https://github.com/rust-lang/rust/issues/96762>
+    #[inline]
     fn write_length_prefix(&mut self, len: usize) {
         self.write_usize(len);
     }
 
-    #[cfg(feature = "nightly")]
     /// Writes a single str into this hasher.
-    ///
-    /// Experimental; see <https://github.com/rust-lang/rust/issues/96762>
+    #[inline]
     fn write_str(&mut self, s: &str) {
         self.write(s.as_bytes());
         self.write_u8(0xff);
@@ -218,33 +250,80 @@ pub trait BuildHasher<T> {
     }
 }
 
+macro_rules! impl_hash_prim {
+    ($($t:ty $(as $u:ty)?: $ne:ident),* $(,)?) => { $(
+        impl<T> $crate::Hash<T> for $t {
+            #[inline]
+            fn hash<H: Hasher<T>>(&self, state: &mut H) {
+                state.$ne(*self $(as $u)?)
+            }
+        }
+    )* };
+}
+
+impl_hash_prim! {
+    u8: write_u8,
+    u16: write_u16,
+    u32: write_u32,
+    u64: write_u64,
+    u128: write_u128,
+    usize: write_usize,
+    i8: write_i8,
+    i16: write_i16,
+    i32: write_i32,
+    i64: write_i64,
+    i128: write_i128,
+    isize: write_isize,
+    bool as u8: write_u8,
+    char as u32: write_u32,
+}
+
+impl<T> Hash<T> for str {
+    #[inline]
+    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        state.write_str(self)
+    }
+}
+
+impl<T, U: Hash<T>> Hash<T> for [U] {
+    #[inline]
+    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        state.write_length_prefix(self.len());
+        Hash::<T>::hash_slice(self, state);
+    }
+}
+
+impl<T, U: Hash<T>, const N: usize> Hash<T> for [U; N] {
+    #[inline]
+    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        Hash::<T>::hash(&self[..], state);
+    }
+}
+
+impl<T, U: ?Sized + Hash<T>> Hash<T> for &U {
+    #[inline]
+    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        (**self).hash(state);
+    }
+}
+
+impl<T, U: ?Sized + Hash<T>> Hash<T> for &mut U {
+    #[inline]
+    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        (**self).hash(state);
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Hash, Hasher};
+    use super::*;
 
-    impl_core_hash!(Empty, RawBytes<'_>);
-
-    pub struct Empty;
-
-    impl<T> Hash<T> for Empty {
-        fn hash<H>(&self, _: &mut H)
-        where
-            H: super::Hasher<T>,
-        {
-        }
-    }
-
-    pub struct RawBytes<'a>(&'a [u8]);
-
-    impl<'a> RawBytes<'a> {
-        pub const fn new(bytes: &'a [u8]) -> Self {
-            Self(bytes)
-        }
-    }
+    pub struct RawBytes<'a>(pub &'a [u8]);
 
     impl<T> Hash<T> for RawBytes<'_> {
+        #[inline]
         fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            state.write(self.0);
+            Hash::<T>::hash_slice(self.0, state)
         }
     }
 }
