@@ -7,5 +7,9 @@ authors = ["Maia <66437537+maia-s@users.noreply.github.com>"]
 [features]
 std = []
 
+# hashing algorithms
+fnv1a = []
+xxh64 = []
+
 [package.metadata.docs.rs]
 all-features = true

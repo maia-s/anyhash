@@ -74,7 +74,10 @@ macro_rules! impl_core_buildhasher {
     )* }
 }
 
+#[cfg(feature = "fnv1a")]
 pub mod fnv1a;
+
+#[cfg(feature = "xxh64")]
 pub mod xxh64;
 
 /// A hashable type.
