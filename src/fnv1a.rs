@@ -4,6 +4,9 @@ use core::ops::BitXorAssign;
 
 use crate::Hasher;
 
+#[cfg(feature = "bnum")]
+use bnum::types::{U1024, U256, U512};
+
 impl_core_buildhasher!(BuildHasher64);
 impl_core_hasher!(Fnv1a<u64>);
 
@@ -56,6 +59,18 @@ pub type Fnv1a64 = Fnv1a<u64>;
 /// Hasher using the Fnv1a 128-bit algorithm.
 pub type Fnv1a128 = Fnv1a<u128>;
 
+#[cfg(feature = "bnum")]
+/// Hasher using the Fnv1a 256-bit algorithm.
+pub type Fnv1a256 = Fnv1a<U256>;
+
+#[cfg(feature = "bnum")]
+/// Hasher using the Fnv1a 512-bit algorithm.
+pub type Fnv1a512 = Fnv1a<U512>;
+
+#[cfg(feature = "bnum")]
+/// Hasher using the Fnv1a 1024-bit algorithm.
+pub type Fnv1a1024 = Fnv1a<U1024>;
+
 /// Configuration trait for the Fnv1a hashers.
 pub trait FnvConfig: Copy + From<u8> + BitXorAssign {
     /// Offset basis.
@@ -89,6 +104,87 @@ impl FnvConfig for u64 {
 impl FnvConfig for u128 {
     const OFFSET_BASIS: Self = 0x6c62272e07bb014262b821756295c58d;
     const PRIME: Self = 0x0000000001000000000000000000013b;
+
+    fn wrapping_mul(self, rhs: Self) -> Self {
+        self.wrapping_mul(rhs)
+    }
+}
+
+#[cfg(feature = "bnum")]
+impl FnvConfig for U256 {
+    const OFFSET_BASIS: Self = Self::from_digits([0x163, 0, 0x10000000000, 0]);
+
+    const PRIME: Self = Self::from_digits([
+        0x1023b4c8caee0535,
+        0xc8b1536847b6bbb3,
+        0x2d98c384c4e576cc,
+        0xdd268dbcaac55036,
+    ]);
+
+    fn wrapping_mul(self, rhs: Self) -> Self {
+        self.wrapping_mul(rhs)
+    }
+}
+
+#[cfg(feature = "bnum")]
+impl FnvConfig for U512 {
+    const OFFSET_BASIS: Self = Self::from_digits([0x157, 0, 0, 0, 0, 0x1000000, 0, 0]);
+
+    const PRIME: Self = Self::from_digits([
+        0xac982aac4afe9fd9,
+        0x182036415f56e34b,
+        0x2ea79bc942dbe7ce,
+        0xe948f68a34c192f6,
+        0x0000000000000d21,
+        0xac87d059c9000000,
+        0xdca1e50f309990ac,
+        0xb86db0b1171f4416,
+    ]);
+
+    fn wrapping_mul(self, rhs: Self) -> Self {
+        self.wrapping_mul(rhs)
+    }
+}
+
+#[cfg(feature = "bnum")]
+impl FnvConfig for U1024 {
+    const OFFSET_BASIS: Self = Self::from_digits([
+        0x18D,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0x10000000000,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ]);
+
+    const PRIME: Self = Self::from_digits([
+        0xaff4b16c71ee90b3,
+        0x6bde8cc9c6a93b21,
+        0x555f256cc005ae55,
+        0xeb6e73802734510a,
+        0x000000000004c6d7,
+        0x0000000000000000,
+        0x0000000000000000,
+        0x0000000000000000,
+        0x0000000000000000,
+        0x0000000000000000,
+        0x9a21d90000000000,
+        0x6c3bf34eda3674da,
+        0x4b29fc4223fdada1,
+        0x32e56d5a591028b7,
+        0x005f7a76758ecc4d,
+        0x0000000000000000,
+    ]);
 
     fn wrapping_mul(self, rhs: Self) -> Self {
         self.wrapping_mul(rhs)

@@ -6,10 +6,14 @@ authors = ["Maia <66437537+maia-s@users.noreply.github.com>"]
 
 [features]
 std = []
+bnum = ["dep:bnum"]
 
 # hashing algorithms
 fnv1a = []
 xxh64 = []
+
+[dependencies]
+bnum = { version = "0.10", optional = true }
 
 [package.metadata.docs.rs]
 all-features = true
