@@ -11,6 +11,9 @@
 #![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
 #![deny(missing_docs)]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 #[cfg(feature = "std")]
 extern crate std;
 
@@ -29,35 +32,142 @@ macro_rules! test_bytes_hash {
     )* };
 }
 
+macro_rules! impl_hasher_deref_writes {
+    ($($t:ty { ne:$ne:ident, le:$le:ident, be:$be:ident }),* $(,)?) => { $(
+        #[inline]
+        fn $ne(&mut self, i: $t) {
+            (**self).$ne(i);
+        }
+
+        #[inline]
+        fn $le(&mut self, i: $t) {
+            (**self).$le(i);
+        }
+
+        #[inline]
+        fn $be(&mut self, i: $t) {
+            (**self).$be(i);
+        }
+    )* };
+}
+
+macro_rules! impl_hasher_deref {
+    () => {
+        #[inline]
+        fn finish(&self) -> T {
+            (**self).finish()
+        }
+
+        #[inline]
+        fn write(&mut self, bytes: &[u8]) {
+            (**self).write(bytes)
+        }
+
+        #[inline]
+        fn write_u8(&mut self, i: u8) {
+            (**self).write_u8(i)
+        }
+
+        #[inline]
+        fn write_i8(&mut self, i: i8) {
+            (**self).write_i8(i)
+        }
+
+        impl_hasher_deref_writes! {
+            u16 { ne: write_u16, le: write_u16_le, be: write_u16_be },
+            u32 { ne: write_u32, le: write_u32_le, be: write_u32_be },
+            u64 { ne: write_u64, le: write_u64_le, be: write_u64_be },
+            u128 { ne: write_u128, le: write_u128_le, be: write_u128_be },
+            usize { ne: write_usize, le: write_usize_le, be: write_usize_be },
+
+            i16 { ne: write_i16, le: write_i16_le, be: write_i16_be },
+            i32 { ne: write_i32, le: write_i32_le, be: write_i32_be },
+            i64 { ne: write_i64, le: write_i64_le, be: write_i64_be },
+            i128 { ne: write_i128, le: write_i128_le, be: write_i128_be },
+            isize { ne: write_isize, le: write_isize_le, be: write_isize_be },
+        }
+
+        #[inline]
+        fn write_length_prefix(&mut self, len: usize) {
+            (**self).write_length_prefix(len)
+        }
+
+        #[inline]
+        fn write_str(&mut self, s: &str) {
+            (**self).write_str(s)
+        }
+    };
+}
+
+macro_rules! impl_hasher_fwd_writes {
+    ($($t:ty: $ne:ident),* $(,)?) => { $(
+        #[inline(always)]
+        fn $ne(&mut self, i: $t) {
+            H::$ne(self.0, i);
+        }
+    )* };
+}
+
+macro_rules! impl_hasher_fwd {
+    () => {
+        #[inline(always)]
+        fn finish(&self) -> u64 {
+            H::finish(self.0)
+        }
+
+        #[inline(always)]
+        fn write(&mut self, bytes: &[u8]) {
+            H::write(self.0, bytes)
+        }
+
+        #[inline(always)]
+        fn write_u8(&mut self, i: u8) {
+            H::write_u8(self.0, i)
+        }
+
+        #[inline(always)]
+        fn write_i8(&mut self, i: i8) {
+            H::write_i8(self.0, i)
+        }
+
+        impl_hasher_fwd_writes! {
+            u16: write_u16,
+            u32: write_u32,
+            u64: write_u64,
+            u128: write_u128,
+            usize: write_usize,
+            i16: write_i16,
+            i32: write_i32,
+            i64: write_i64,
+            i128: write_i128,
+            isize: write_isize
+        }
+
+        #[cfg(feature = "nightly")]
+        #[inline(always)]
+        fn write_length_prefix(&mut self, len: usize) {
+            H::write_length_prefix(self.0, len)
+        }
+
+        #[cfg(feature = "nightly")]
+        #[inline(always)]
+        fn write_str(&mut self, s: &str) {
+            H::write_str(self.0, s)
+        }
+    };
+}
+
 #[macro_export]
 /// Implement [`Hash<u64>`] for types that already implement `::core::hash::Hash`.
 macro_rules! impl_hash {
-    ($($t:ty),* $(,)?) => { $(
-        impl $crate::Hash<u64> for $t {
+    ($($t:ident $(
+        <$($lt0:lifetime $(, $lt:lifetime)*)? $($gen:ident $(: $con0:path $(: $con:path)*)?),*>
+    )?),* $(,)?) => { $(
+        impl$(<$($lt $(,$lt)*)? $($gen: $($con0 $(+ $con)*)?),*>)? $crate::Hash<u64> for $t$(<$($lt0 (,$lt)*)? $($gen),*>)? {
             fn hash<H: $crate::Hasher<u64>>(&self, state: &mut H) {
                 struct Wrap<'a, H: $crate::Hasher<u64>>(&'a mut H);
                 impl <H: $crate::Hasher<u64>> ::core::hash::Hasher for Wrap<'_, H> {
-                    #[inline(always)]
-                    fn finish(&self) -> u64 {
-                        H::finish(self.0)
-                    }
-
-                    #[inline(always)]
-                    fn write(&mut self, bytes: &[u8]) {
-                        H::write(self.0, bytes)
-                    }
-
-                    #[cfg(feature = "nightly")]
-                    #[inline(always)]
-                    fn write_length_prefix(&mut self, len: usize) {
-                        H::write_length_prefix(self.0, len)
-                    }
-
-                    #[cfg(feature = "nightly")]
-                    #[inline(always)]
-                    fn write_str(&mut self, s: &str) {
-                        H::write_str(self.0, s)
-                    }
+                    impl_hasher_fwd!();
                 }
                 <Self as ::core::hash::Hash>::hash(self, &mut Wrap(state))
             }
@@ -74,27 +184,7 @@ macro_rules! impl_core_hash {
             fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
                 struct Wrap<'a, H: ::core::hash::Hasher>(&'a mut H);
                 impl<H: ::core::hash::Hasher> $crate::Hasher<u64> for Wrap<'_, H> {
-                    #[inline(always)]
-                    fn finish(&self) -> u64 {
-                        H::finish(self.0)
-                    }
-
-                    #[inline(always)]
-                    fn write(&mut self, bytes: &[u8]) {
-                        H::write(self.0, bytes)
-                    }
-
-                    #[cfg(feature = "nightly")]
-                    #[inline(always)]
-                    fn write_length_prefix(&mut self, len: usize) {
-                        H::write_length_prefix(self.0, len)
-                    }
-
-                    #[cfg(feature = "nightly")]
-                    #[inline(always)]
-                    fn write_str(&mut self, s: &str) {
-                        H::write_str(self.0, s)
-                    }
+                    impl_hasher_fwd!();
                 }
                 <Self as $crate::Hash<u64>>::hash(self, &mut Wrap(state))
             }
@@ -345,6 +435,91 @@ impl_hash_tuple! {
     (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9),
     (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10),
     (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11),
+}
+
+#[cfg(feature = "alloc")]
+mod alloc_impls {
+    use super::*;
+    use alloc::{
+        boxed::Box,
+        collections::{BTreeMap, BTreeSet, LinkedList, VecDeque},
+        rc::Rc,
+        string::String,
+        sync::Arc,
+        vec::Vec,
+    };
+
+    impl<T, U: ?Sized + Hash<T>> Hash<T> for Box<U> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            (**self).hash(state)
+        }
+    }
+
+    impl<T, U: ?Sized + Hasher<T>> Hasher<T> for Box<U> {
+        impl_hasher_deref!();
+    }
+
+    impl<T, U: ?Sized + Hash<T>> Hash<T> for Rc<U> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            (**self).hash(state)
+        }
+    }
+
+    impl<T, U: ?Sized + Hash<T>> Hash<T> for Arc<U> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            (**self).hash(state)
+        }
+    }
+
+    impl<T> Hash<T> for String {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            (**self).hash(state)
+        }
+    }
+
+    impl<T, U: Hash<T>> Hash<T> for Vec<U> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            (**self).hash(state)
+        }
+    }
+
+    impl<T, K: Hash<T>, V: Hash<T>> Hash<T> for BTreeMap<K, V> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            state.write_length_prefix(self.len());
+            for item in self {
+                item.hash(state);
+            }
+        }
+    }
+
+    // full hash requires access to private inner state
+    impl_hash!(BTreeSet<K: core::hash::Hash>);
+
+    impl<T, U: Hash<T>> Hash<T> for LinkedList<U> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            state.write_length_prefix(self.len());
+            for item in self {
+                item.hash(state);
+            }
+        }
+    }
+
+    impl<T, U: Hash<T>> Hash<T> for VecDeque<U> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            state.write_length_prefix(self.len());
+            for item in self {
+                item.hash(state);
+            }
+        }
+    }
 }
 
 #[cfg(test)]

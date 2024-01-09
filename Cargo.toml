@@ -5,7 +5,8 @@ edition = "2021"
 authors = ["Maia <66437537+maia-s@users.noreply.github.com>"]
 
 [features]
-std = []
+std = ["alloc"]
+alloc = []
 nightly = []
 
 # optional integrations
