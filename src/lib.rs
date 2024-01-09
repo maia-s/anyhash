@@ -1,4 +1,9 @@
 //! Hashing algorithms and tools.
+//!
+//! This crate provides the traits [`Hash`], [`Hasher`] and [`BuildHasher`], which are exactly
+//! like their counterparts in `core`/`std`, except that they're generic over the type of the hash.
+//!
+//! It also provides some hash algorithms that implement these traits.
 
 #![no_std]
 #![cfg_attr(feature = "nightly", feature(doc_auto_cfg))]

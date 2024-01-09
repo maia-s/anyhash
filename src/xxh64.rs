@@ -55,7 +55,7 @@ impl BuildHasher<u64> for Xxh64DefaultBuildHasher {
 pub type XXh64HashMap<K, V> = std::collections::HashMap<K, V, Xxh64BuildHasher>;
 
 #[cfg(feature = "std")]
-/// `HashMap` configured to use the `Xxh64` hasher.
+/// `HashMap` configured to use the `Xxh64` hasher with the default seed.
 pub type XXh64DefaultHashMap<K, V> = std::collections::HashMap<K, V, Xxh64DefaultBuildHasher>;
 
 #[cfg(feature = "std")]
@@ -63,7 +63,7 @@ pub type XXh64DefaultHashMap<K, V> = std::collections::HashMap<K, V, Xxh64Defaul
 pub type XXh64HashSet<T> = std::collections::HashSet<T, Xxh64BuildHasher>;
 
 #[cfg(feature = "std")]
-/// `HashSet` configured to use the `Xxh64` hasher.
+/// `HashSet` configured to use the `Xxh64` hasher with the default seed.
 pub type XXh64DefaultHashSet<T> = std::collections::HashSet<T, Xxh64DefaultBuildHasher>;
 
 #[repr(C, align(8))]

@@ -39,7 +39,7 @@ impl<T: FnvConfig> BuildHasher<T> for Fnv1aBuildHasher<T> {
     }
 }
 
-/// `BuildHasher` for the `Fnv1a` hasher with default seed (zero sized).
+/// `BuildHasher` for the `Fnv1a` hasher with the default seed (zero sized).
 #[derive(Default)]
 pub struct Fnv1aDefaultBuildHasher;
 
@@ -56,7 +56,7 @@ impl<T: FnvConfig> BuildHasher<T> for Fnv1aDefaultBuildHasher {
 pub type Fnv1aHashMap<K, V> = std::collections::HashMap<K, V, Fnv1aBuildHasher<u64>>;
 
 #[cfg(feature = "std")]
-/// `HashMap` configured to use the `Fnv1a64` hasher.
+/// `HashMap` configured to use the `Fnv1a64` hasher with the default seed.
 pub type Fnv1aDefaultHashMap<K, V> = std::collections::HashMap<K, V, Fnv1aDefaultBuildHasher>;
 
 #[cfg(feature = "std")]
@@ -64,7 +64,7 @@ pub type Fnv1aDefaultHashMap<K, V> = std::collections::HashMap<K, V, Fnv1aDefaul
 pub type Fnv1aHashSet<T> = std::collections::HashSet<T, Fnv1aBuildHasher<u64>>;
 
 #[cfg(feature = "std")]
-/// `HashSet` configured to use the `Fnv1a64` hasher.
+/// `HashSet` configured to use the `Fnv1a64` hasher with the default seed.
 pub type Fnv1aDefaultHashSet<T> = std::collections::HashSet<T, Fnv1aDefaultBuildHasher>;
 
 /// Hasher using the Fnv1a 32-bit algorithm.
