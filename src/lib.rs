@@ -314,6 +314,39 @@ impl<T, U: ?Sized + Hash<T>> Hash<T> for &mut U {
     }
 }
 
+impl<T> Hash<T> for () {
+    #[inline]
+    fn hash<H: Hasher<T>>(&self, _: &mut H) {}
+}
+
+macro_rules! impl_hash_tuple {
+    ($(($($i:ident),+ $(,)?)),* $(,)?) => { $(
+        impl<T, $($i: Hash<T>),* + ?Sized> Hash<T> for ($($i,)*) {
+            #[inline]
+            fn hash<H: Hasher<T>>(&self, state: &mut H) {
+                #[allow(non_snake_case)]
+                let ($($i,)*) = self;
+                $( $i.hash(state); )*
+            }
+        }
+    )* };
+}
+
+impl_hash_tuple! {
+    (T0),
+    (T0, T1),
+    (T0, T1, T2),
+    (T0, T1, T2, T3),
+    (T0, T1, T2, T3, T4),
+    (T0, T1, T2, T3, T4, T5),
+    (T0, T1, T2, T3, T4, T5, T6),
+    (T0, T1, T2, T3, T4, T5, T6, T7),
+    (T0, T1, T2, T3, T4, T5, T6, T7, T8),
+    (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9),
+    (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10),
+    (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
