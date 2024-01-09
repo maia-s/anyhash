@@ -2,21 +2,18 @@
 
 use core::ops::BitXorAssign;
 
-use crate::Hasher;
+use crate::{BuildHasher, Hasher};
 
 #[cfg(feature = "bnum")]
 use bnum::types::{U1024, U256, U512};
 
-impl_core_buildhasher!(BuildHasher64);
+impl_core_buildhasher!(Fnv1aBuildHasher<u64>, Fnv1aDefaultBuildHasher);
 impl_core_hasher!(Fnv1a<u64>);
 
 /// `BuildHasher` for the `Fnv1a` hasher.
-pub struct BuildHasher<T>(T);
+pub struct Fnv1aBuildHasher<T>(T);
 
-/// `BuildHasher` for the `Fnv1a` 64-bit hasher.
-pub type BuildHasher64 = BuildHasher<u64>;
-
-impl<T: FnvConfig> BuildHasher<T> {
+impl<T: FnvConfig> Fnv1aBuildHasher<T> {
     /// Create a `BuildHasher` for `Fnv1a` with the default seed.
     pub const fn new() -> Self {
         Self(Fnv1a::<T>::OFFSET_BASIS)
@@ -28,7 +25,13 @@ impl<T: FnvConfig> BuildHasher<T> {
     }
 }
 
-impl<T: FnvConfig> crate::BuildHasher<T> for BuildHasher<T> {
+impl<T: FnvConfig> Default for Fnv1aBuildHasher<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T: FnvConfig> BuildHasher<T> for Fnv1aBuildHasher<T> {
     type Hasher = Fnv1a<T>;
 
     fn build_hasher(&self) -> Self::Hasher {
@@ -36,19 +39,33 @@ impl<T: FnvConfig> crate::BuildHasher<T> for BuildHasher<T> {
     }
 }
 
-impl<T: FnvConfig> Default for BuildHasher<T> {
-    fn default() -> Self {
-        Self::new()
+/// `BuildHasher` for the `Fnv1a` hasher with default seed (zero sized).
+#[derive(Default)]
+pub struct Fnv1aDefaultBuildHasher;
+
+impl<T: FnvConfig> BuildHasher<T> for Fnv1aDefaultBuildHasher {
+    type Hasher = Fnv1a<T>;
+
+    fn build_hasher(&self) -> Self::Hasher {
+        Self::Hasher::new()
     }
 }
 
 #[cfg(feature = "std")]
 /// `HashMap` configured to use the `Fnv1a64` hasher.
-pub type HashMap<K, V> = std::collections::HashMap<K, V, BuildHasher64>;
+pub type Fnv1aHashMap<K, V> = std::collections::HashMap<K, V, Fnv1aBuildHasher<u64>>;
+
+#[cfg(feature = "std")]
+/// `HashMap` configured to use the `Fnv1a64` hasher.
+pub type Fnv1aDefaultHashMap<K, V> = std::collections::HashMap<K, V, Fnv1aDefaultBuildHasher>;
 
 #[cfg(feature = "std")]
 /// `HashSet` configured to use the `Fnv1a64` hasher.
-pub type HashSet<T> = std::collections::HashSet<T, BuildHasher64>;
+pub type Fnv1aHashSet<T> = std::collections::HashSet<T, Fnv1aBuildHasher<u64>>;
+
+#[cfg(feature = "std")]
+/// `HashSet` configured to use the `Fnv1a64` hasher.
+pub type Fnv1aDefaultHashSet<T> = std::collections::HashSet<T, Fnv1aDefaultBuildHasher>;
 
 /// Hasher using the Fnv1a 32-bit algorithm.
 pub type Fnv1a32 = Fnv1a<u32>;
@@ -231,17 +248,17 @@ impl<T: FnvConfig> Hasher<T> for Fnv1a<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tests::Empty;
-
-    use crate::BuildHasher as _;
-    use crate::Hash;
+    use crate::{
+        tests::Empty,
+        {BuildHasher, Hash},
+    };
 
     fn default_seed<T: Hash<u64>>(x: T) -> u64 {
-        BuildHasher::default().hash_one(x)
+        Fnv1aDefaultBuildHasher.hash_one(x)
     }
 
     fn custom_seed<T: Hash<u64>>(x: T) -> u64 {
-        BuildHasher::with_seed(0x55555555_55555555).hash_one(x)
+        Fnv1aBuildHasher::with_seed(0x55555555_55555555).hash_one(x)
     }
 
     #[test]
