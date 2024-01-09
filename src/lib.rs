@@ -2,11 +2,13 @@
 //!
 //! This crate provides the traits [`Hash`], [`Hasher`] and [`BuildHasher`], which are exactly
 //! like their counterparts in `core`/`std`, except that they're generic over the type of the hash.
+//! [`Hasher`] provides some extra methods.
 //!
-//! It also provides some hash algorithms that implement these traits.
+//! It also optionally provides some hash algorithms that implement these traits.
 
 #![no_std]
 #![cfg_attr(feature = "nightly", feature(doc_auto_cfg))]
+#![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
 #![deny(missing_docs)]
 
 #[cfg(feature = "std")]
@@ -46,6 +48,18 @@ macro_rules! impl_core_hash {
                     #[inline(always)]
                     fn write(&mut self, bytes: &[u8]) {
                         H::write(self.0, bytes)
+                    }
+
+                    #[cfg(feature = "nightly")]
+                    #[inline(always)]
+                    fn write_length_prefix(&mut self, len: usize) {
+                        H::write_length_prefix(self.0, len)
+                    }
+
+                    #[cfg(feature = "nightly")]
+                    #[inline(always)]
+                    fn write_str(&mut self, s: &str) {
+                        H::write_str(self.0, s)
                     }
                 }
                 <Self as $crate::Hash<u64>>::hash(self, &mut Wrap(state))
@@ -168,6 +182,23 @@ pub trait Hasher<T> {
         i64 { ne: write_i64, le: write_i64_le, be: write_i64_be },
         i128 { ne: write_i128, le: write_i128_le, be: write_i128_be },
         isize { ne: write_isize, le: write_isize_le, be: write_isize_be },
+    }
+
+    #[cfg(feature = "nightly")]
+    /// Writes a length prefix into this hasher, as part of being prefix-free.
+    ///
+    /// Experimental; see <https://github.com/rust-lang/rust/issues/96762>
+    fn write_length_prefix(&mut self, len: usize) {
+        self.write_usize(len);
+    }
+
+    #[cfg(feature = "nightly")]
+    /// Writes a single str into this hasher.
+    ///
+    /// Experimental; see <https://github.com/rust-lang/rust/issues/96762>
+    fn write_str(&mut self, s: &str) {
+        self.write(s.as_bytes());
+        self.write_u8(0xff);
     }
 }
 
