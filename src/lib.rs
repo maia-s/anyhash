@@ -211,7 +211,7 @@ pub trait BuildHasher<T> {
     fn build_hasher(&self) -> Self::Hasher;
 
     /// Calculates the hash of a single value.
-    fn hash_one(&self, x: impl Hash<T>) -> T {
+    fn hash_one<U: Hash<T>>(&self, x: U) -> T {
         let mut hasher = self.build_hasher();
         x.hash(&mut hasher);
         hasher.finish()
