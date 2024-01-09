@@ -1,0 +1,11 @@
+[package]
+name = "genhash"
+version = "0.1.0"
+edition = "2021"
+authors = ["Maia <66437537+maia-s@users.noreply.github.com>"]
+
+[features]
+std = []
+
+[package.metadata.docs.rs]
+all-features = true
