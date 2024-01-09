@@ -1,4 +1,4 @@
-//! Hashing algorithms and tools.
+//! Hashing traits, algorithms and tools.
 //!
 //! This crate provides the traits [`Hash`], [`Hasher`] and [`BuildHasher`], which are exactly
 //! like their counterparts in `core`/`std`, except that they're generic over the type of the hash.

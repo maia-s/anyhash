@@ -10,16 +10,18 @@ use bnum::types::{U1024, U256, U512};
 impl_core_buildhasher!(Fnv1aBuildHasher<u64>, Fnv1aDefaultBuildHasher);
 impl_core_hasher!(Fnv1a<u64>);
 
-/// `BuildHasher` for the `Fnv1a` hasher.
+/// [`BuildHasher`] implementation for the [`Fnv1a`] hasher.
+/// If you don't need support for using custom seeds, use the zero sized
+/// [`Fnv1aDefaultBuildHasher`] instead.
 pub struct Fnv1aBuildHasher<T>(T);
 
 impl<T: FnvConfig> Fnv1aBuildHasher<T> {
-    /// Create a `BuildHasher` for `Fnv1a` with the default seed.
+    /// Create a [`BuildHasher`] for [`Fnv1a`] using the default seed.
     pub const fn new() -> Self {
         Self(Fnv1a::<T>::OFFSET_BASIS)
     }
 
-    /// Create a `BuildHasher` for `Fnv1a` with a custom seed.
+    /// Create a [`BuildHasher`] for [`Fnv1a`] with a custom seed.
     pub const fn with_seed(seed: T) -> Self {
         Self(seed)
     }
@@ -39,7 +41,7 @@ impl<T: FnvConfig> BuildHasher<T> for Fnv1aBuildHasher<T> {
     }
 }
 
-/// `BuildHasher` for the `Fnv1a` hasher with the default seed (zero sized).
+/// [`BuildHasher`] implementation for the [`Fnv1a`] hasher using the default seed (zero sized).
 #[derive(Default)]
 pub struct Fnv1aDefaultBuildHasher;
 
@@ -52,19 +54,19 @@ impl<T: FnvConfig> BuildHasher<T> for Fnv1aDefaultBuildHasher {
 }
 
 #[cfg(feature = "std")]
-/// `HashMap` configured to use the `Fnv1a64` hasher.
+/// `HashMap` from `std` configured to use the [`Fnv1a64`] hasher.
 pub type Fnv1aHashMap<K, V> = std::collections::HashMap<K, V, Fnv1aBuildHasher<u64>>;
 
 #[cfg(feature = "std")]
-/// `HashMap` configured to use the `Fnv1a64` hasher with the default seed.
+/// `HashMap` from `std` configured to use the [`Fnv1a64`] hasher with the default seed.
 pub type Fnv1aDefaultHashMap<K, V> = std::collections::HashMap<K, V, Fnv1aDefaultBuildHasher>;
 
 #[cfg(feature = "std")]
-/// `HashSet` configured to use the `Fnv1a64` hasher.
+/// `HashSet` from `std` configured to use the [`Fnv1a64`] hasher.
 pub type Fnv1aHashSet<T> = std::collections::HashSet<T, Fnv1aBuildHasher<u64>>;
 
 #[cfg(feature = "std")]
-/// `HashSet` configured to use the `Fnv1a64` hasher with the default seed.
+/// `HashSet` from `std` configured to use the [`Fnv1a64`] hasher with the default seed.
 pub type Fnv1aDefaultHashSet<T> = std::collections::HashSet<T, Fnv1aDefaultBuildHasher>;
 
 /// Hasher using the Fnv1a 32-bit algorithm.
@@ -215,12 +217,12 @@ impl<T: FnvConfig> Fnv1a<T> {
     const OFFSET_BASIS: T = T::OFFSET_BASIS;
     const PRIME: T = T::PRIME;
 
-    /// Create a new `Fnv1a64` hasher with the default seed.
+    /// Create a new `Fnv1a` hasher using the default seed.
     pub const fn new() -> Self {
         Self::with_seed(Self::OFFSET_BASIS)
     }
 
-    /// Create a new `Fnv1a64` hasher with a custom seed.
+    /// Create a new `Fnv1a` hasher with a custom seed.
     pub const fn with_seed(seed: T) -> Self {
         Self(seed)
     }

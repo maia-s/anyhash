@@ -9,16 +9,18 @@ use crate::{BuildHasher, Hasher};
 impl_core_buildhasher!(Xxh64BuildHasher, Xxh64DefaultBuildHasher);
 impl_core_hasher!(Xxh64);
 
-/// `BuildHasher` for the `Xxh64` hasher.
+/// [`BuildHasher`] implementation for the [`Xxh64`] hasher.
+/// If you don't need support for using custom seeds, use the zero sized
+/// [`Xxh64DefaultBuildHasher`] instead.
 pub struct Xxh64BuildHasher(u64);
 
 impl Xxh64BuildHasher {
-    /// Create a `BuildHasher` for `Xxh64` with the default seed.
+    /// Create a [`BuildHasher`] for [`Xxh64`] using the default seed.
     pub const fn new() -> Self {
         Self(0)
     }
 
-    /// Create a `BuildHasher` for `Xxh64` with a custom seed.
+    /// Create a [`BuildHasher`] for [`Xxh64`] with a custom seed.
     pub const fn with_seed(seed: u64) -> Self {
         Self(seed)
     }
@@ -38,7 +40,7 @@ impl Default for Xxh64BuildHasher {
     }
 }
 
-/// `BuildHasher` for the `Xxh64` hasher with the default seed (zero sized).
+/// [`BuildHasher`] implementation for the [`Xxh64`] hasher using the default seed (zero sized).
 #[derive(Default)]
 pub struct Xxh64DefaultBuildHasher;
 
@@ -51,19 +53,19 @@ impl BuildHasher<u64> for Xxh64DefaultBuildHasher {
 }
 
 #[cfg(feature = "std")]
-/// `HashMap` configured to use the `Xxh64` hasher.
+/// `HashMap` from `std` configured to use the [`Xxh64`] hasher.
 pub type XXh64HashMap<K, V> = std::collections::HashMap<K, V, Xxh64BuildHasher>;
 
 #[cfg(feature = "std")]
-/// `HashMap` configured to use the `Xxh64` hasher with the default seed.
+/// `HashMap` from `std` configured to use the [`Xxh64`] hasher with the default seed.
 pub type XXh64DefaultHashMap<K, V> = std::collections::HashMap<K, V, Xxh64DefaultBuildHasher>;
 
 #[cfg(feature = "std")]
-/// `HashSet` configured to use the `Xxh64` hasher.
+/// `HashSet` from `std` configured to use the [`Xxh64`] hasher.
 pub type XXh64HashSet<T> = std::collections::HashSet<T, Xxh64BuildHasher>;
 
 #[cfg(feature = "std")]
-/// `HashSet` configured to use the `Xxh64` hasher with the default seed.
+/// `HashSet` from `std` configured to use the [`Xxh64`] hasher with the default seed.
 pub type XXh64DefaultHashSet<T> = std::collections::HashSet<T, Xxh64DefaultBuildHasher>;
 
 #[repr(C, align(8))]
@@ -103,7 +105,7 @@ impl Xxh64 {
     const PRIME64_4: u64 = 0x85ebca77c2b2ae63;
     const PRIME64_5: u64 = 0x27d4eb2f165667c5;
 
-    /// Create a new `Xxh64` hasher with the default seed.
+    /// Create a new `Xxh64` hasher using the default seed.
     pub const fn new() -> Self {
         Self::with_seed(0)
     }
