@@ -1,5 +1,12 @@
 //! Hashing algorithms and tools.
 
+#![no_std]
+#![cfg_attr(feature = "nightly", feature(doc_auto_cfg))]
+#![deny(missing_docs)]
+
+#[cfg(feature = "std")]
+extern crate std;
+
 #[cfg(test)]
 macro_rules! test_bytes_hash {
     ($([$hashfn:ident] $($bs:ident: $hash:expr),* $(,)?)*) => { $(

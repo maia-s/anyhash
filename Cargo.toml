@@ -6,6 +6,9 @@ authors = ["Maia <66437537+maia-s@users.noreply.github.com>"]
 
 [features]
 std = []
+nightly = []
+
+# optional integrations
 bnum = ["dep:bnum"]
 
 # hashing algorithms
