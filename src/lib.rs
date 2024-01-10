@@ -157,13 +157,47 @@ macro_rules! impl_hasher_fwd {
     };
 }
 
+macro_rules! impl_empty_hash {
+    ($($t:ty),* $(,)?) => { $(
+        impl<T> Hash<T> for $t {
+            fn hash<H: Hasher<T>>(&self, _: &mut H) {}
+        }
+    )* };
+}
+
+macro_rules! impl_hash_from_method {
+    ([$T:ident] $($m:ident { $($t:ident $(<
+        $($gen:ident $(: $con0:path $(: $con:path)*)?),+
+    >)?),* $(,)? })*) => { $($(
+        impl<$T $($(, $gen $(: $con0 $(+ $con)*)?)*)?> Hash<$T> for $t $(<$($gen),*>)? {
+            #[inline]
+            fn hash<H: Hasher<$T>>(&self, state: &mut H) {
+                Hash::<$T>::hash(&self.$m(), state)
+            }
+        }
+    )*)* };
+}
+
+macro_rules! impl_hash_from_field {
+    ([$T:ident] $($n:tt { $($t:ident $(<
+        $($gen:ident $(: $con0:path $(: $con:path)*)?),+
+    >)?),* $(,)? })*) => { $($(
+        impl<$T $($(, $gen $(: $con0 $(+ $con)*)?)*)?> Hash<$T> for $t $(<$($gen),*>)? {
+            #[inline]
+            fn hash<H: Hasher<$T>>(&self, state: &mut H) {
+                Hash::<$T>::hash(&self.$n, state)
+            }
+        }
+    )*)* };
+}
+
 #[macro_export]
 /// Implement [`Hash<u64>`] for types that already implement `::core::hash::Hash`.
-macro_rules! impl_hash {
-    ($($t:ident $(
-        <$($lt0:lifetime $(, $lt:lifetime)*)? $($gen:ident $(: $con0:path $(: $con:path)*)?),*>
-    )?),* $(,)?) => { $(
-        impl$(<$($lt $(,$lt)*)? $($gen: $($con0 $(+ $con)*)?),*>)? $crate::Hash<u64> for $t$(<$($lt0 (,$lt)*)? $($gen),*>)? {
+macro_rules! impl_hash_u64 {
+    ($($t:ident $(<
+        $($gen:ident $(: $con0:path $(: $con:path)*)?),+
+    >)?),* $(,)?) => { $(
+        impl$(<$($gen: $($con0 $(+ $con)*)?),*>)? $crate::Hash<u64> for $t $(<$($gen),*>)? {
             fn hash<H: $crate::Hasher<u64>>(&self, state: &mut H) {
                 struct Wrap<'a, H: $crate::Hasher<u64>>(&'a mut H);
                 impl <H: $crate::Hasher<u64>> ::core::hash::Hasher for Wrap<'_, H> {
@@ -404,10 +438,23 @@ impl<T, U: ?Sized + Hash<T>> Hash<T> for &mut U {
     }
 }
 
-impl<T> Hash<T> for () {
+// this is only for thin pointers
+impl<T, U: Hash<T>> Hash<T> for *const U {
     #[inline]
-    fn hash<H: Hasher<T>>(&self, _: &mut H) {}
+    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        (*self as usize).hash(state)
+    }
 }
+
+// this is only for thin pointers
+impl<T, U: Hash<T>> Hash<T> for *mut U {
+    #[inline]
+    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        (*self as usize).hash(state)
+    }
+}
+
+impl_empty_hash!(());
 
 macro_rules! impl_hash_tuple {
     ($(($($i:ident),+ $(,)?)),* $(,)?) => { $(
@@ -435,6 +482,248 @@ impl_hash_tuple! {
     (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9),
     (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10),
     (T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11),
+}
+
+mod core_impls {
+    use super::*;
+    use core::{
+        cmp::{Ordering, Reverse},
+        convert::Infallible,
+        ffi::CStr,
+        fmt::Error,
+        marker::{PhantomData, PhantomPinned},
+        mem::{discriminant, transmute, Discriminant, ManuallyDrop},
+        net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
+        num::{
+            NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+            NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Saturating, Wrapping,
+        },
+        ops::{
+            Bound, ControlFlow, Deref, Range, RangeFrom, RangeFull, RangeInclusive, RangeTo,
+            RangeToInclusive,
+        },
+        panic::Location,
+        pin::Pin,
+        ptr::NonNull,
+        sync::atomic,
+        task::Poll,
+        time::Duration,
+    };
+
+    impl<T> Hash<T> for Ordering {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            (*self as i8).hash(state)
+        }
+    }
+
+    impl<T, U: ?Sized> Hash<T> for PhantomData<U> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, _: &mut H) {}
+    }
+
+    // full hash requires access to private inner state
+    impl_hash_u64!(Discriminant<T>);
+
+    impl<T, U: Hash<T>> Hash<T> for ManuallyDrop<U> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            Hash::<T>::hash(
+                unsafe {
+                    // # Safety
+                    // `ManuallyDrop<T>` is guaranteed to have the same layout and bit validity as T
+                    transmute::<&Self, &U>(self)
+                },
+                state,
+            );
+        }
+    }
+
+    impl<T> Hash<T> for SocketAddrV4 {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            self.ip().hash(state);
+            self.port().hash(state);
+        }
+    }
+
+    impl<T> Hash<T> for SocketAddrV6 {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            self.ip().hash(state);
+            self.port().hash(state);
+            self.flowinfo().hash(state);
+            self.scope_id().hash(state);
+        }
+    }
+
+    // full hash requires discriminant
+    impl Hash<u64> for IpAddr {
+        #[inline]
+        fn hash<H: Hasher<u64>>(&self, state: &mut H) {
+            Hash::<u64>::hash(&discriminant(self), state);
+            match self {
+                IpAddr::V4(v4) => v4.hash(state),
+                IpAddr::V6(v6) => v6.hash(state),
+            }
+        }
+    }
+
+    // full hash requires discriminant
+    impl Hash<u64> for SocketAddr {
+        #[inline]
+        fn hash<H: Hasher<u64>>(&self, state: &mut H) {
+            Hash::<u64>::hash(&discriminant(self), state);
+            match self {
+                SocketAddr::V4(v4) => v4.hash(state),
+                SocketAddr::V6(v6) => v6.hash(state),
+            }
+        }
+    }
+
+    impl<T, I: Hash<T>> Hash<T> for Range<I> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            Hash::<T>::hash(&self.start, state);
+            Hash::<T>::hash(&self.end, state);
+        }
+    }
+
+    // RangeInclusive has private internal state
+    impl_hash_u64!(RangeInclusive<I: core::hash::Hash>);
+
+    // full hash requires discriminant
+    impl<T: Hash<u64>> Hash<u64> for Bound<T> {
+        #[inline]
+        fn hash<H: Hasher<u64>>(&self, state: &mut H) {
+            Hash::<u64>::hash(&discriminant(self), state);
+            match self {
+                Bound::Included(x) | Bound::Excluded(x) => Hash::<u64>::hash(x, state),
+                Bound::Unbounded => (),
+            }
+        }
+    }
+
+    // full hash requires discriminant
+    impl<B: Hash<u64>, C: Hash<u64>> Hash<u64> for ControlFlow<B, C> {
+        #[inline]
+        fn hash<H: Hasher<u64>>(&self, state: &mut H) {
+            Hash::<u64>::hash(&discriminant(self), state);
+            match self {
+                ControlFlow::Continue(c) => Hash::<u64>::hash(c, state),
+                ControlFlow::Break(b) => Hash::<u64>::hash(b, state),
+            }
+        }
+    }
+
+    // full hash requires discriminant
+    impl<T: Hash<u64>> Hash<u64> for Option<T> {
+        #[inline]
+        fn hash<H: Hasher<u64>>(&self, state: &mut H) {
+            Hash::<u64>::hash(&discriminant(self), state);
+            match self {
+                None => (),
+                Some(x) => Hash::<u64>::hash(x, state),
+            }
+        }
+    }
+
+    impl<T> Hash<T> for Location<'_> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            self.file().hash(state);
+            self.line().hash(state);
+            self.column().hash(state);
+        }
+    }
+
+    impl<T, P: Deref<Target = impl Hash<T>>> Hash<T> for Pin<P> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            P::Target::hash(self, state)
+        }
+    }
+
+    // Hash<T> is only implemented for thin pointers
+    impl<T, U: Hash<T>> Hash<T> for NonNull<U> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            self.as_ptr().hash(state);
+        }
+    }
+
+    // full hash requires discriminant
+    impl<U: Hash<u64>, E: Hash<u64>> Hash<u64> for Result<U, E> {
+        #[inline]
+        fn hash<H: Hasher<u64>>(&self, state: &mut H) {
+            Hash::<u64>::hash(&discriminant(self), state);
+            match self {
+                Ok(x) => Hash::<u64>::hash(x, state),
+                Err(x) => Hash::<u64>::hash(x, state),
+            }
+        }
+    }
+
+    // full hash requires discriminant
+    impl Hash<u64> for atomic::Ordering {
+        #[inline]
+        fn hash<H: Hasher<u64>>(&self, state: &mut H) {
+            Hash::<u64>::hash(&discriminant(self), state);
+        }
+    }
+
+    // full hash requires discriminant
+    impl<U: Hash<u64>> Hash<u64> for Poll<U> {
+        #[inline]
+        fn hash<H: Hasher<u64>>(&self, state: &mut H) {
+            Hash::<u64>::hash(&discriminant(self), state);
+            match self {
+                Poll::Ready(x) => Hash::<u64>::hash(x, state),
+                Poll::Pending => (),
+            }
+        }
+    }
+
+    impl<T> Hash<T> for Duration {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            self.as_secs().hash(state);
+            self.subsec_nanos().hash(state);
+        }
+    }
+
+    impl_empty_hash! {
+        Infallible, Error, PhantomPinned, RangeFull
+    }
+
+    impl_hash_from_method! {
+        [T]
+        get {
+            NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize,
+            NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize,
+        }
+        octets {
+            Ipv4Addr, Ipv6Addr,
+        }
+        to_bytes_with_nul {
+            CStr,
+        }
+    }
+
+    impl_hash_from_field! {
+        [T]
+        0 {
+            Reverse<U: Hash<T>>,
+            Saturating<U: Hash<T>>, Wrapping<U: Hash<T>>,
+        }
+        start {
+            RangeFrom<I: Hash<T>>,
+        }
+        end {
+            RangeTo<I: Hash<T>>,
+            RangeToInclusive<I: Hash<T>>,
+        }
+    }
 }
 
 #[cfg(feature = "alloc")]
@@ -499,7 +788,7 @@ mod alloc_impls {
     }
 
     // full hash requires access to private inner state
-    impl_hash!(BTreeSet<K: core::hash::Hash>);
+    impl_hash_u64!(BTreeSet<K: core::hash::Hash>);
 
     impl<T, U: Hash<T>> Hash<T> for LinkedList<U> {
         #[inline]
