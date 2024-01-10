@@ -192,7 +192,7 @@ macro_rules! impl_hash_from_field {
 #[macro_export]
 /// Implement [`Hash<u64>`] for types that already implement `::core::hash::Hash`.
 /// If you know the hashed type doesn't call `::core::hash::Hasher::finish`,
-/// you can use [`impl_hash_gen`] instead to implement [`Hash<T>`] for all `T`
+/// you can use [`impl_hash_t`] instead to implement [`Hash<T>`] for all `T`
 macro_rules! impl_hash_u64 {
     ($($t:ident $(<
         $($lt0:lifetime $(,$lt:lifetime)*)? $(,)? $($gen:ident $(: $con0:path $(: $con:path)*)?),*
@@ -220,7 +220,7 @@ macro_rules! impl_hash_u64 {
 /// Implement [`Hash<T>`] for types that already implement `::core::hash::Hash`.
 /// This will panic if `::core::hash::Hasher::finish` is called during hashing.
 /// You can use [`impl_hash_u64`] instead to only implement [`Hash<u64>`].
-macro_rules! impl_hash_gen {
+macro_rules! impl_hash_t {
     ($($t:ident $(<
         $($lt0:lifetime $(,$lt:lifetime)*)? $(,)? $($gen:ident $(: $con0:path $(: $con:path)*)?),*
     >)?),* $(,)?) => { $(
@@ -568,7 +568,7 @@ mod core_impls {
         time::Duration,
     };
 
-    impl_hash_gen!(Layout, TypeId);
+    impl_hash_t!(Layout, TypeId);
 
     impl<T> Hash<T> for Ordering {
         #[inline]
@@ -582,7 +582,7 @@ mod core_impls {
         fn hash<H: Hasher<T>>(&self, _: &mut H) {}
     }
 
-    impl_hash_gen!(Discriminant<U>);
+    impl_hash_t!(Discriminant<U>);
 
     impl<T, U: Hash<T>> Hash<T> for ManuallyDrop<U> {
         #[inline]
@@ -598,7 +598,7 @@ mod core_impls {
         }
     }
 
-    impl_hash_gen!(SocketAddrV4, SocketAddrV6);
+    impl_hash_t!(SocketAddrV4, SocketAddrV6);
 
     impl<T> Hash<T> for IpAddr {
         #[inline]
@@ -631,7 +631,7 @@ mod core_impls {
     }
 
     // RangeInclusive has private internal state
-    impl_hash_gen!(RangeInclusive<I: core::hash::Hash>);
+    impl_hash_t!(RangeInclusive<I: core::hash::Hash>);
 
     impl<T, U: Hash<T>> Hash<T> for Bound<U> {
         #[inline]
@@ -666,7 +666,7 @@ mod core_impls {
         }
     }
 
-    impl_hash_gen!(Location<'a>);
+    impl_hash_t!(Location<'a>);
 
     impl<T, P: Deref<Target = impl Hash<T>>> Hash<T> for Pin<P> {
         #[inline]
@@ -711,7 +711,7 @@ mod core_impls {
         }
     }
 
-    impl_hash_gen!(Duration);
+    impl_hash_t!(Duration);
 
     impl_empty_hash! {
         Infallible, Error, PhantomPinned, RangeFull
@@ -817,7 +817,7 @@ mod alloc_impls {
         }
     }
 
-    impl_hash_gen!(BTreeSet<K: core::hash::Hash>);
+    impl_hash_t!(BTreeSet<K: core::hash::Hash>);
 
     impl<T, U: Hash<T>> Hash<T> for LinkedList<U> {
         #[inline]
@@ -858,7 +858,7 @@ mod std_impls {
         time::{Instant, SystemTime},
     };
 
-    impl_hash_gen!(
+    impl_hash_t!(
         OsStr,
         OsString,
         FileType,
