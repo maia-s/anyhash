@@ -479,9 +479,7 @@ impl<T, U: ?Sized> Hash<T> for *mut U {
     }
 }
 
-impl_empty_hash!(());
-
-macro_rules! impl_hash_tuple {
+macro_rules! impl_hash_tuple_and_fn {
     ($(($($i:ident),+ $(,)?)),* $(,)?) => { $(
         impl<T, $($i: Hash<T>),* + ?Sized> Hash<T> for ($($i,)*) {
             #[inline]
@@ -491,10 +489,40 @@ macro_rules! impl_hash_tuple {
                 $( $i.hash(state); )*
             }
         }
+
+        impl<T, R $(, $i)*> Hash<T> for fn($($i),*) -> R {
+            #[inline]
+            fn hash<H: Hasher<T>>(&self, state: &mut H) {
+                (*self as usize).hash(state);
+            }
+        }
+
+        impl<T, R $(, $i)*> Hash<T> for extern "C" fn($($i),*) -> R {
+            #[inline]
+            fn hash<H: Hasher<T>>(&self, state: &mut H) {
+                (*self as usize).hash(state);
+            }
+        }
     )* };
 }
 
-impl_hash_tuple! {
+impl_empty_hash!(());
+
+impl<T, R> Hash<T> for fn() -> R {
+    #[inline]
+    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        (*self as usize).hash(state);
+    }
+}
+
+impl<T, R> Hash<T> for extern "C" fn() -> R {
+    #[inline]
+    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        (*self as usize).hash(state);
+    }
+}
+
+impl_hash_tuple_and_fn! {
     (T0),
     (T0, T1),
     (T0, T1, T2),
