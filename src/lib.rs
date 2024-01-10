@@ -192,9 +192,10 @@ macro_rules! impl_hash_from_field {
 /// you can use [`impl_hash_gen`] instead to implement [`Hash<T>`] for all `T`
 macro_rules! impl_hash_u64 {
     ($($t:ident $(<
-        $($gen:ident $(: $con0:path $(: $con:path)*)?),+
+        $($lt0:lifetime $(,$lt:lifetime)*)? $(,)? $($gen:ident $(: $con0:path $(: $con:path)*)?),*
     >)?),* $(,)?) => { $(
-        impl$(<$($gen: $($con0 $(+ $con)*)?),*>)? $crate::Hash<u64> for $t $(<$($gen),*>)? {
+        impl<$($($lt0, $($lt,)*)? $($gen: $($con0 $(+ $con)*)?),*)?>
+        $crate::Hash<u64> for $t $(<$($lt0, $($lt,)*)? $($gen),*>)? {
             fn hash<H: $crate::Hasher<u64>>(&self, state: &mut H) {
                 struct Wrap<'a, H: $crate::Hasher<u64>>(&'a mut H);
                 impl <H: $crate::Hasher<u64>> ::core::hash::Hasher for Wrap<'_, H> {
@@ -227,9 +228,10 @@ impl<T, H: Hasher<T>> ::core::hash::Hasher for WrapCoreForGen<'_, T, H> {
 /// You can use [`impl_hash_u64`] instead to only implement [`Hash<u64>`].
 macro_rules! impl_hash_gen {
     ($($t:ident $(<
-        $($gen:ident $(: $con0:path $(: $con:path)*)?),+
+        $($lt0:lifetime $(,$lt:lifetime)*)? $(,)? $($gen:ident $(: $con0:path $(: $con:path)*)?),*
     >)?),* $(,)?) => { $(
-        impl<T $($(, $gen: $($con0 $(+ $con)*)?),*)?> $crate::Hash<T> for $t $(<$($gen),*>)? {
+        impl<$($($lt0, $($lt,)*)?)? T $($(, $gen: $($con0 $(+ $con)*)?),*)?>
+        $crate::Hash<T> for $t $(<$($lt0, $($lt,)*)? $($gen),*>)? {
             fn hash<H: $crate::Hasher<T>>(&self, state: &mut H) {
                 <Self as ::core::hash::Hash>::hash(self,
                     &mut $crate::WrapCoreForGen(state, ::core::marker::PhantomData)
@@ -575,23 +577,7 @@ mod core_impls {
         }
     }
 
-    impl<T> Hash<T> for SocketAddrV4 {
-        #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            self.ip().hash(state);
-            self.port().hash(state);
-        }
-    }
-
-    impl<T> Hash<T> for SocketAddrV6 {
-        #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            self.ip().hash(state);
-            self.port().hash(state);
-            self.flowinfo().hash(state);
-            self.scope_id().hash(state);
-        }
-    }
+    impl_hash_gen!(SocketAddrV4, SocketAddrV6);
 
     impl<T> Hash<T> for IpAddr {
         #[inline]
@@ -659,14 +645,7 @@ mod core_impls {
         }
     }
 
-    impl<T> Hash<T> for Location<'_> {
-        #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            self.file().hash(state);
-            self.line().hash(state);
-            self.column().hash(state);
-        }
-    }
+    impl_hash_gen!(Location<'a>);
 
     impl<T, P: Deref<Target = impl Hash<T>>> Hash<T> for Pin<P> {
         #[inline]
@@ -711,13 +690,7 @@ mod core_impls {
         }
     }
 
-    impl<T> Hash<T> for Duration {
-        #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            self.as_secs().hash(state);
-            self.subsec_nanos().hash(state);
-        }
-    }
+    impl_hash_gen!(Duration);
 
     impl_empty_hash! {
         Infallible, Error, PhantomPinned, RangeFull
