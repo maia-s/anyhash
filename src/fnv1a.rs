@@ -250,7 +250,7 @@ impl<T: FnvConfig> Hasher<T> for Fnv1a<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{tests::RawBytes, BuildHasher, Hash};
+    use crate::{BuildHasher, Hash};
 
     fn default_seed<T: Hash<u64>>(x: T) -> u64 {
         Fnv1aDefaultBuildHasher.hash_one(x)
@@ -262,12 +262,12 @@ mod tests {
 
     #[test]
     fn empty_default_seed() {
-        assert_eq!(default_seed(RawBytes(b"")), 0xcbf29ce484222325);
+        assert_eq!(default_seed(()), 0xcbf29ce484222325);
     }
 
     #[test]
     fn empty_custom_seed() {
-        assert_eq!(custom_seed(RawBytes(b"")), 0x5555555555555555);
+        assert_eq!(custom_seed(()), 0x5555555555555555);
     }
 
     test_bytes_hash! {
