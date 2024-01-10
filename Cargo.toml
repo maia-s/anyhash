@@ -1,3 +1,3 @@
 [workspace]
-members = ["genhash", "genhash-derive"]
+members = ["hash-t", "hash-t-derive"]
 resolver = "2"

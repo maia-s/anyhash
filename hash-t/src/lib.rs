@@ -18,7 +18,7 @@ extern crate alloc;
 extern crate std;
 
 /// Derive macro for [`Hash<T>`].
-pub use genhash_derive::HashT;
+pub use hash_t_derive::HashT;
 
 #[cfg(test)]
 macro_rules! test_bytes_hash {

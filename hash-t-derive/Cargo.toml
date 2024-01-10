@@ -1,5 +1,5 @@
 [package]
-name = "genhash-derive"
+name = "hash-t-derive"
 version = "0.1.0"
 edition = "2021"
 authors = ["Maia <66437537+maia-s@users.noreply.github.com>"]

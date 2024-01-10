@@ -1,5 +1,5 @@
 [package]
-name = "genhash"
+name = "hash-t"
 version = "0.1.0"
 edition = "2021"
 authors = ["Maia <66437537+maia-s@users.noreply.github.com>"]
@@ -17,7 +17,7 @@ fnv1a = []
 xxh64 = []
 
 [dependencies]
-genhash-derive = { path = "../genhash-derive" }
+hash-t-derive = { path = "../hash-t-derive" }
 bnum = { version = "0.10", optional = true }
 
 [package.metadata.docs.rs]
