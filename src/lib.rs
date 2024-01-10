@@ -540,6 +540,8 @@ impl_hash_tuple_and_fn! {
 mod core_impls {
     use super::*;
     use core::{
+        alloc::Layout,
+        any::TypeId,
         cmp::{Ordering, Reverse},
         convert::Infallible,
         ffi::CStr,
@@ -562,6 +564,8 @@ mod core_impls {
         task::Poll,
         time::Duration,
     };
+
+    impl_hash_gen!(Layout, TypeId);
 
     impl<T> Hash<T> for Ordering {
         #[inline]
@@ -744,13 +748,22 @@ mod core_impls {
 mod alloc_impls {
     use super::*;
     use alloc::{
+        borrow::{Cow, ToOwned},
         boxed::Box,
         collections::{BTreeMap, BTreeSet, LinkedList, VecDeque},
+        ffi::CString,
         rc::Rc,
         string::String,
         sync::Arc,
         vec::Vec,
     };
+
+    impl<T, B: ?Sized + Hash<T> + ToOwned> Hash<T> for Cow<'_, B> {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            Hash::<T>::hash(&**self, state)
+        }
+    }
 
     impl<T, U: ?Sized + Hash<T>> Hash<T> for Box<U> {
         #[inline]
@@ -822,6 +835,39 @@ mod alloc_impls {
             }
         }
     }
+
+    impl<T> Hash<T> for CString {
+        #[inline]
+        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            Hash::<T>::hash(&**self, state);
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+mod std_impls {
+    use super::*;
+    use std::{
+        ffi::{OsStr, OsString},
+        fs::FileType,
+        path::{Component, Path, PathBuf, Prefix, PrefixComponent},
+        thread::ThreadId,
+        time::{Instant, SystemTime},
+    };
+
+    impl_hash_gen!(
+        OsStr,
+        OsString,
+        FileType,
+        Path,
+        PathBuf,
+        PrefixComponent<'a>,
+        Component<'a>,
+        Prefix<'a>,
+        ThreadId,
+        Instant,
+        SystemTime
+    );
 }
 
 #[doc(hidden)]
