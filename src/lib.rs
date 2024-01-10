@@ -212,15 +212,21 @@ macro_rules! impl_hash_u64 {
     )* }
 }
 
-struct WrapCoreForGen<'a, T, H: Hasher<T>>(&'a mut H, ::core::marker::PhantomData<T>);
-impl<T, H: Hasher<T>> ::core::hash::Hasher for WrapCoreForGen<'_, T, H> {
-    #[inline(always)]
-    fn finish(&self) -> u64 {
-        panic!("`core::hash::Hasher::finish` called while calculating generic hash");
-    }
+macro_rules! WrapCoreForGen {
+    () => {
+        struct WrapCoreForGen<'a, T, H: Hasher<T>>(&'a mut H, ::core::marker::PhantomData<T>);
+        impl<T, H: Hasher<T>> ::core::hash::Hasher for WrapCoreForGen<'_, T, H> {
+            #[inline(always)]
+            fn finish(&self) -> u64 {
+                panic!("`core::hash::Hasher::finish` called while calculating generic hash");
+            }
 
-    impl_hasher_fwd!();
+            impl_hasher_fwd!();
+        }
+    };
 }
+
+WrapCoreForGen!();
 
 #[macro_export]
 /// Implement [`Hash<T>`] for types that already implement `::core::hash::Hash`.
@@ -233,8 +239,9 @@ macro_rules! impl_hash_gen {
         impl<$($($lt0, $($lt,)*)?)? T $($(, $gen: $($con0 $(+ $con)*)?),*)?>
         $crate::Hash<T> for $t $(<$($lt0, $($lt,)*)? $($gen),*>)? {
             fn hash<H: $crate::Hasher<T>>(&self, state: &mut H) {
+                WrapCoreForGen!();
                 <Self as ::core::hash::Hash>::hash(self,
-                    &mut $crate::WrapCoreForGen(state, ::core::marker::PhantomData)
+                    &mut WrapCoreForGen(state, ::core::marker::PhantomData)
                 )
             }
         }
