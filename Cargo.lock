@@ -13,4 +13,9 @@ name = "genhash"
 version = "0.1.0"
 dependencies = [
  "bnum",
+ "genhash-derive",
 ]
+
+[[package]]
+name = "genhash-derive"
+version = "0.1.0"
