@@ -13,6 +13,7 @@ impl_core_hasher!(Fnv1a<u64>);
 /// [`BuildHasher`] implementation for the [`Fnv1a`] hasher.
 /// If you don't need support for using custom seeds, use the zero sized
 /// [`Fnv1aDefaultBuildHasher`] instead.
+#[derive(Clone, Debug)]
 pub struct Fnv1aBuildHasher<T>(T);
 
 impl<T: FnvConfig> Fnv1aBuildHasher<T> {
@@ -42,7 +43,7 @@ impl<T: FnvConfig> BuildHasher<T> for Fnv1aBuildHasher<T> {
 }
 
 /// [`BuildHasher`] implementation for the [`Fnv1a`] hasher using the default seed (zero sized).
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Fnv1aDefaultBuildHasher;
 
 impl<T: FnvConfig> BuildHasher<T> for Fnv1aDefaultBuildHasher {
@@ -211,6 +212,7 @@ impl FnvConfig for U1024 {
 }
 
 /// Hasher using the Fnv1a algorithm.
+#[derive(Clone)]
 pub struct Fnv1a<T>(T);
 
 impl<T: FnvConfig> Fnv1a<T> {

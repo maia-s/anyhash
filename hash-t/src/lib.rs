@@ -19,6 +19,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
+use core::fmt::Debug;
 use core::marker::PhantomData;
 
 /// Derive macro for [`Hash<T>`].
@@ -628,6 +629,24 @@ impl<T, U: Hasher<T>> Hasher<T> for HasherLe<T, U> {
     }
 }
 
+impl<T, U: Hasher<T> + Debug> Debug for HasherLe<T, U> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        Debug::fmt(&self.0, f)
+    }
+}
+
+impl<T, U: Hasher<T> + Clone> Clone for HasherLe<T, U> {
+    fn clone(&self) -> Self {
+        Self::new(self.0.clone())
+    }
+}
+
+impl<T, U: Hasher<T> + Default> Default for HasherLe<T, U> {
+    fn default() -> Self {
+        Self::new(U::default())
+    }
+}
+
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to big endian.
 pub struct HasherBe<T, U: Hasher<T>>(U, PhantomData<fn() -> T>);
 
@@ -689,6 +708,24 @@ impl<T, U: Hasher<T>> Hasher<T> for HasherBe<T, U> {
     }
 }
 
+impl<T, U: Hasher<T> + Debug> Debug for HasherBe<T, U> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        Debug::fmt(&self.0, f)
+    }
+}
+
+impl<T, U: Hasher<T> + Clone> Clone for HasherBe<T, U> {
+    fn clone(&self) -> Self {
+        Self::new(self.0.clone())
+    }
+}
+
+impl<T, U: Hasher<T> + Default> Default for HasherBe<T, U> {
+    fn default() -> Self {
+        Self::new(U::default())
+    }
+}
+
 /// `BuildHasher` for making [`HasherLe`] hashers.
 pub struct BuildHasherLe<T, U: BuildHasher<T>>(U, PhantomData<fn() -> T>);
 
@@ -707,6 +744,18 @@ impl<T, U: BuildHasher<T>> BuildHasher<T> for BuildHasherLe<T, U> {
     #[inline]
     fn build_hasher(&self) -> Self::Hasher {
         HasherLe::<T, U::Hasher>::new(self.0.build_hasher())
+    }
+}
+
+impl<T, U: BuildHasher<T> + Debug> Debug for BuildHasherLe<T, U> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        Debug::fmt(&self.0, f)
+    }
+}
+
+impl<T, U: BuildHasher<T> + Clone> Clone for BuildHasherLe<T, U> {
+    fn clone(&self) -> Self {
+        Self::new(self.0.clone())
     }
 }
 
@@ -734,6 +783,18 @@ impl<T, U: BuildHasher<T>> BuildHasher<T> for BuildHasherBe<T, U> {
     #[inline]
     fn build_hasher(&self) -> Self::Hasher {
         HasherBe::<T, U::Hasher>::new(self.0.build_hasher())
+    }
+}
+
+impl<T, U: BuildHasher<T> + Debug> Debug for BuildHasherBe<T, U> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        Debug::fmt(&self.0, f)
+    }
+}
+
+impl<T, U: BuildHasher<T> + Clone> Clone for BuildHasherBe<T, U> {
+    fn clone(&self) -> Self {
+        Self::new(self.0.clone())
     }
 }
 

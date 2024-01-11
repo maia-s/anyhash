@@ -12,6 +12,7 @@ impl_core_hasher!(Xxh64);
 /// [`BuildHasher`] implementation for the [`Xxh64`] hasher.
 /// If you don't need support for using custom seeds, use the zero sized
 /// [`Xxh64DefaultBuildHasher`] instead.
+#[derive(Clone, Debug)]
 pub struct Xxh64BuildHasher(u64);
 
 impl Xxh64BuildHasher {
@@ -41,7 +42,7 @@ impl Default for Xxh64BuildHasher {
 }
 
 /// [`BuildHasher`] implementation for the [`Xxh64`] hasher using the default seed (zero sized).
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Xxh64DefaultBuildHasher;
 
 impl BuildHasher<u64> for Xxh64DefaultBuildHasher {
@@ -91,6 +92,7 @@ impl Buffer {
 }
 
 /// Hasher using the Xxh64 algorithm.
+#[derive(Clone)]
 pub struct Xxh64 {
     acc: [u64; 4],
     buffer: Buffer,
