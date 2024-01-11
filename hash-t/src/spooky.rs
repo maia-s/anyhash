@@ -206,26 +206,20 @@ impl<V: Version> SpookyV<V> {
         }
     }
 
-    fn short(data: *const u8, length: usize, hash1: u64, hash2: u64) -> u128 {
-        let mut buf = [0_u64; SC_NUM_VARS * 2];
+    fn short(&self) -> u128 {
+        let length = self.length;
 
         union U {
-            p8: *mut u8,
-            p32: *mut u32,
-            p64: *mut u64,
-            i: usize,
+            p8: *const u8,
+            p32: *const u32,
+            p64: *const u64,
         }
         let mut u = U {
-            p8: data as *mut u8,
+            p64: self.data.as_ptr(),
         };
 
-        if unsafe { u.i } & 7 != 0 {
-            unsafe { data.copy_to_nonoverlapping(buf.as_mut_ptr() as *mut u8, length) };
-            u.p64 = buf.as_mut_ptr();
-        }
-
         let mut remainder: usize = length % 32;
-        let mut h = [hash1, hash2, SC_CONST, SC_CONST];
+        let mut h = [self.state[0], self.state[1], SC_CONST, SC_CONST];
 
         if length > 15 {
             let end: *const u64 = unsafe { u.p64.add((length / 32) * 4) };
@@ -551,9 +545,7 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
     #[inline]
     fn finish(&self) -> u128 {
         if self.length < SC_BUF_SIZE {
-            let hash1 = self.state[0];
-            let hash2 = self.state[1];
-            return Self::short(self.data.as_ptr() as *const u8, self.length, hash1, hash2);
+            return self.short();
         }
 
         let mut data = self.data.as_ptr();
