@@ -164,7 +164,7 @@ pub use hash_t_macros::impl_core_hasher;
 /// #   type Hasher = H;
 /// #   fn build_hasher(&self) -> Self::Hasher { H }
 /// # }
-/// // Implements `Hash<T>` for `MyType` and `MyOtherType`.
+/// // Implements `::core::Hash:BuildHasher` for `MyType` and `MyOtherType`.
 /// impl_core_build_hasher! {
 ///     impl<T> MyType<T>;
 ///     impl<'a, T, U: 'a> MyOtherType<'a, T, u32, U> where Self: Display;
