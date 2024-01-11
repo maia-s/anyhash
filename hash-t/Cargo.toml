@@ -17,7 +17,7 @@ fnv1a = []
 xxh64 = []
 
 [dependencies]
-hash-t-derive = { path = "../hash-t-derive" }
+hash-t-macros = { path = "../hash-t-macros" }
 bnum = { version = "0.10", optional = true }
 
 [package.metadata.docs.rs]

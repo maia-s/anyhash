@@ -13,11 +13,11 @@ name = "hash-t"
 version = "0.1.0"
 dependencies = [
  "bnum",
- "hash-t-derive",
+ "hash-t-macros",
 ]
 
 [[package]]
-name = "hash-t-derive"
+name = "hash-t-macros"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",
