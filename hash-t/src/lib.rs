@@ -32,7 +32,7 @@ pub use hash_t_macros::impl_core_hasher;
 pub use hash_t_macros::impl_core_buildhasher;
 
 /// Implement [`Hash<u64>`] for types that already implement `::core::hash::Hash`.
-/// If you know the hashed type doesn't call `::core::hash::Hasher::finish`,
+/// If you know the hashed type doesn't call `::core::hash::Hasher::finish` during hashing,
 /// you can use [`impl_hash_t`] instead to implement [`Hash<T>`] for all `T`
 pub use hash_t_macros::impl_hash_u64;
 
