@@ -203,7 +203,7 @@ impl Spooky {
             }
         }
 
-        h[3] += (length as u64).rotate_left(56);
+        h[3] = h[3].wrapping_add((length as u64).rotate_left(56));
         'fallthrough: loop {
             match remainder {
                 15 => {
@@ -235,8 +235,13 @@ impl Spooky {
                     remainder -= 1;
                     continue 'fallthrough;
                 }
-                9 => {
+                10 => {
                     h[3] = h[3].wrapping_add(unsafe { (u.p8.add(9)).read() as u64 }.rotate_left(8));
+                    remainder -= 1;
+                    continue 'fallthrough;
+                }
+                9 => {
+                    h[3] = h[3].wrapping_add(unsafe { (u.p8.add(8)).read() as u64 });
                     remainder -= 1;
                     continue 'fallthrough;
                 }
@@ -283,7 +288,7 @@ impl Spooky {
                 }
                 0 => {
                     h[2] = h[2].wrapping_add(Self::SC_CONST);
-                    h[3] = h[2].wrapping_add(Self::SC_CONST);
+                    h[3] = h[3].wrapping_add(Self::SC_CONST);
                     break;
                 }
                 _ => unreachable!(),
@@ -501,7 +506,11 @@ impl Hasher<u128> for Spooky {
             remainder -= Self::SC_BLOCK_SIZE as u8;
         }
 
-        unsafe { (data as *mut u8).write_bytes(0, Self::SC_BLOCK_SIZE - remainder as usize) };
+        unsafe {
+            (data as *mut u8)
+                .add(remainder as usize)
+                .write_bytes(0, Self::SC_BLOCK_SIZE - remainder as usize)
+        };
 
         unsafe {
             (data as *mut u8)
