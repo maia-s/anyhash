@@ -19,6 +19,8 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
+use core::marker::PhantomData;
+
 /// Derive macro for [`Hash<T>`].
 pub use hash_t_macros::HashT;
 
@@ -475,6 +477,30 @@ macro_rules! make_hasher_writes {
     )* };
 }
 
+macro_rules! make_hasher_writes_map {
+    ($endian:literal $($t:ty { ne:$ne:ident -> $nem:ident, le:$le:ident, be:$be:ident }),* $(,)?) => { $(
+        #[doc = "Writes a single `"]
+        #[doc = stringify!($t)]
+        #[doc = "` into this hasher in "]
+        #[doc = $endian]
+        #[doc = " byte order."]
+        #[inline]
+        fn $ne(&mut self, i: $t) {
+            self.$nem(i);
+        }
+
+        #[inline]
+        fn $le(&mut self, i: $t) {
+            self.write(&i.to_le_bytes());
+        }
+
+        #[inline]
+        fn $be(&mut self, i: $t) {
+            self.write(&i.to_be_bytes());
+        }
+    )* };
+}
+
 /// A trait for hashing an arbitrary stream of bytes.
 pub trait Hasher<T> {
     /// Returns the hash value for the values written so far.
@@ -538,6 +564,174 @@ pub trait BuildHasher<T> {
         let mut hasher = self.build_hasher();
         x.hash(&mut hasher);
         hasher.finish()
+    }
+}
+
+/// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to little endian.
+pub struct HasherLe<T, U: Hasher<T>>(U, PhantomData<T>);
+
+impl<T, U: Hasher<T>> HasherLe<T, U> {
+    /// Create a new `HasherLe`.
+    pub const fn new(hasher: U) -> Self {
+        Self(hasher, PhantomData)
+    }
+}
+
+impl<T, U: Hasher<T>> Hasher<T> for HasherLe<T, U> {
+    fn finish(&self) -> T {
+        self.0.finish()
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        self.0.write(bytes);
+    }
+
+    #[inline]
+    fn write_u8(&mut self, i: u8) {
+        self.0.write(&[i]);
+    }
+
+    make_hasher_writes_map! {
+        "little endian"
+        u16 { ne: write_u16 -> write_u16_le, le: write_u16_le, be: write_u16_be },
+        u32 { ne: write_u32 -> write_u32_le, le: write_u32_le, be: write_u32_be },
+        u64 { ne: write_u64 -> write_u64_le, le: write_u64_le, be: write_u64_be },
+        u128 { ne: write_u128 -> write_u128_le, le: write_u128_le, be: write_u128_be },
+        usize { ne: write_usize -> write_usize_le, le: write_usize_le, be: write_usize_be },
+    }
+
+    #[inline]
+    fn write_i8(&mut self, i: i8) {
+        self.0.write(&[i as u8]);
+    }
+
+    make_hasher_writes_map! {
+        "little endian"
+        i16 { ne: write_i16 -> write_i16_le, le: write_i16_le, be: write_i16_be },
+        i32 { ne: write_i32 -> write_i32_le, le: write_i32_le, be: write_i32_be },
+        i64 { ne: write_i64 -> write_i64_le, le: write_i64_le, be: write_i64_be },
+        i128 { ne: write_i128 -> write_i128_le, le: write_i128_le, be: write_i128_be },
+        isize { ne: write_isize -> write_isize_le, le: write_isize_le, be: write_isize_be },
+    }
+
+    #[inline]
+    fn write_length_prefix(&mut self, len: usize) {
+        self.0.write_usize(len);
+    }
+
+    #[inline]
+    fn write_str(&mut self, s: &str) {
+        self.0.write(s.as_bytes());
+        self.0.write_u8(0xff);
+    }
+}
+
+/// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to big endian.
+pub struct HasherBe<T, U: Hasher<T>>(U, PhantomData<T>);
+
+impl<T, U: Hasher<T>> HasherBe<T, U> {
+    /// Create a new `HasherBe`.
+    pub const fn new(hasher: U) -> Self {
+        Self(hasher, PhantomData)
+    }
+}
+
+impl<T, U: Hasher<T>> Hasher<T> for HasherBe<T, U> {
+    fn finish(&self) -> T {
+        self.0.finish()
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        self.0.write(bytes);
+    }
+
+    #[inline]
+    fn write_u8(&mut self, i: u8) {
+        self.0.write(&[i]);
+    }
+
+    make_hasher_writes_map! {
+        "big endian"
+        u16 { ne: write_u16 -> write_u16_be, le: write_u16_le, be: write_u16_be },
+        u32 { ne: write_u32 -> write_u32_be, le: write_u32_le, be: write_u32_be },
+        u64 { ne: write_u64 -> write_u64_be, le: write_u64_le, be: write_u64_be },
+        u128 { ne: write_u128 -> write_u128_be, le: write_u128_le, be: write_u128_be },
+        usize { ne: write_usize -> write_usize_be, le: write_usize_le, be: write_usize_be },
+    }
+
+    #[inline]
+    fn write_i8(&mut self, i: i8) {
+        self.0.write(&[i as u8]);
+    }
+
+    make_hasher_writes_map! {
+        "big endian"
+        i16 { ne: write_i16 -> write_i16_be, le: write_i16_le, be: write_i16_be },
+        i32 { ne: write_i32 -> write_i32_be, le: write_i32_le, be: write_i32_be },
+        i64 { ne: write_i64 -> write_i64_be, le: write_i64_le, be: write_i64_be },
+        i128 { ne: write_i128 -> write_i128_be, le: write_i128_le, be: write_i128_be },
+        isize { ne: write_isize -> write_isize_be, le: write_isize_le, be: write_isize_be },
+    }
+
+    #[inline]
+    fn write_length_prefix(&mut self, len: usize) {
+        self.0.write_usize(len);
+    }
+
+    #[inline]
+    fn write_str(&mut self, s: &str) {
+        self.0.write(s.as_bytes());
+        self.0.write_u8(0xff);
+    }
+}
+
+/// `BuildHasher` for making [`HasherLe`] hashers.
+pub struct BuildHasherLe<T, U: BuildHasher<T>>(U, PhantomData<T>);
+
+impl<T, U: BuildHasher<T>> BuildHasherLe<T, U> {
+    /// Create a new `BuildHasherLe`.
+    pub const fn new(build_hasher: U) -> Self {
+        Self(build_hasher, PhantomData)
+    }
+}
+
+impl<T, U: BuildHasher<T>> BuildHasher<T> for BuildHasherLe<T, U> {
+    type Hasher = HasherLe<T, U::Hasher>;
+
+    #[inline]
+    fn build_hasher(&self) -> Self::Hasher {
+        HasherLe::<T, U::Hasher>::new(self.0.build_hasher())
+    }
+}
+
+impl<T, U: BuildHasher<T> + Default> Default for BuildHasherLe<T, U> {
+    fn default() -> Self {
+        Self::new(U::default())
+    }
+}
+
+/// `BuildHasher` for making [`HasherBe`] hashers.
+pub struct BuildHasherBe<T, U: BuildHasher<T>>(U, PhantomData<T>);
+
+impl<T, U: BuildHasher<T>> BuildHasherBe<T, U> {
+    /// Create a new `BuildHasherBe`.
+    pub const fn new(build_hasher: U) -> Self {
+        Self(build_hasher, PhantomData)
+    }
+}
+
+impl<T, U: BuildHasher<T>> BuildHasher<T> for BuildHasherBe<T, U> {
+    type Hasher = HasherBe<T, U::Hasher>;
+
+    #[inline]
+    fn build_hasher(&self) -> Self::Hasher {
+        HasherBe::<T, U::Hasher>::new(self.0.build_hasher())
+    }
+}
+
+impl<T, U: BuildHasher<T> + Default> Default for BuildHasherBe<T, U> {
+    fn default() -> Self {
+        Self::new(U::default())
     }
 }
 
