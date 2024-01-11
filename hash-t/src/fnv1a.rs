@@ -2,12 +2,12 @@
 
 use core::ops::BitXorAssign;
 
-use crate::{BuildHasher, Hasher};
+use crate::{impl_core_buildhasher, impl_core_hasher, BuildHasher, Hasher};
 
 #[cfg(feature = "bnum")]
 use bnum::types::{U1024, U256, U512};
 
-impl_core_buildhasher!(Fnv1aBuildHasher<u64>, Fnv1aDefaultBuildHasher);
+impl_core_buildhasher!(Fnv1aBuildHasher<u64>; Fnv1aDefaultBuildHasher);
 impl_core_hasher!(Fnv1a<u64>);
 
 /// [`BuildHasher`] implementation for the [`Fnv1a`] hasher.

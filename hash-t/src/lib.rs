@@ -22,6 +22,15 @@ extern crate std;
 /// Derive macro for [`Hash<T>`].
 pub use hash_t_macros::HashT;
 
+/// Implement `::core::Hash::Hash` for types that already implement [`Hash<u64>`].
+pub use hash_t_macros::impl_core_hash;
+
+/// Implement `::core::Hash::Hasher` for types that already implement [`Hasher<u64>`].
+pub use hash_t_macros::impl_core_hasher;
+
+/// Implement `::core::Hash::BuildHasher` for types that already implement [`BuildHasher<u64>`].
+pub use hash_t_macros::impl_core_buildhasher;
+
 #[cfg(test)]
 macro_rules! test_bytes_hash {
     ($([$hashfn:ident] $($bs:ident: $hash:expr),* $(,)?)*) => { $(
@@ -113,6 +122,8 @@ macro_rules! impl_hasher_fwd_writes {
     )* };
 }
 
+#[doc(hidden)]
+#[macro_export]
 macro_rules! impl_hasher_fwd {
     () => {
         #[inline(always)]
@@ -233,60 +244,6 @@ macro_rules! impl_hash_t {
                 <Self as ::core::hash::Hash>::hash(
                     self, &mut $crate::internal::WrapCoreForGen::new(state)
                 )
-            }
-        }
-    )* }
-}
-
-#[macro_export]
-/// Implement `::core::Hash::Hash` for types that already implement [`Hash<u64>`].
-macro_rules! impl_core_hash {
-    ($($t:ty),* $(,)?) => { $(
-        impl ::core::hash::Hash for $t {
-            #[inline]
-            fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
-                struct Wrap<'a, H: ::core::hash::Hasher>(&'a mut H);
-                impl<H: ::core::hash::Hasher> $crate::Hasher<u64> for Wrap<'_, H> {
-                    #[inline(always)]
-                    fn finish(&self) -> u64 {
-                        H::finish(self.0)
-                    }
-
-                    impl_hasher_fwd!();
-                }
-                <Self as $crate::Hash<u64>>::hash(self, &mut Wrap(state))
-            }
-        }
-    )* };
-}
-
-#[macro_export]
-/// Implement `::core::Hash::Hasher` for types that already implement [`Hasher<u64>`].
-macro_rules! impl_core_hasher {
-    ($($t:ty),* $(,)?) => { $(
-        impl ::core::hash::Hasher for $t {
-            #[inline(always)]
-            fn finish(&self) -> u64 {
-                <Self as $crate::Hasher<u64>>::finish(self)
-            }
-
-            #[inline(always)]
-            fn write(&mut self, bytes: &[u8]) {
-                <Self as $crate::Hasher<u64>>::write(self, bytes)
-            }
-        }
-    )* };
-}
-
-#[macro_export]
-/// Implement `::core::Hash::BuildHasher` for types that already implement [`BuildHasher<u64>`].
-macro_rules! impl_core_buildhasher {
-    ($($t:ty),* $(,)?) => { $(
-        impl ::core::hash::BuildHasher for $t {
-            type Hasher = <Self as $crate::BuildHasher<u64>>::Hasher;
-
-            fn build_hasher(&self) -> Self::Hasher {
-                <Self as $crate::BuildHasher<u64>>::build_hasher(self)
             }
         }
     )* }

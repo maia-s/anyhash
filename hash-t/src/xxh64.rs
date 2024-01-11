@@ -4,9 +4,9 @@
 
 use core::mem::transmute;
 
-use crate::{BuildHasher, Hasher};
+use crate::{impl_core_buildhasher, impl_core_hasher, BuildHasher, Hasher};
 
-impl_core_buildhasher!(Xxh64BuildHasher, Xxh64DefaultBuildHasher);
+impl_core_buildhasher!(Xxh64BuildHasher; Xxh64DefaultBuildHasher);
 impl_core_hasher!(Xxh64);
 
 /// [`BuildHasher`] implementation for the [`Xxh64`] hasher.
