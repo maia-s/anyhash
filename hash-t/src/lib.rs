@@ -31,15 +31,83 @@ pub use hash_t_macros::impl_core_hasher;
 /// Implement `::core::Hash::BuildHasher` for types that already implement [`BuildHasher<u64>`].
 pub use hash_t_macros::impl_core_buildhasher;
 
-/// Implement [`Hash<u64>`] for types that already implement `::core::hash::Hash`.
-/// If you know the hashed type doesn't call `::core::hash::Hasher::finish` during hashing,
-/// you can use [`impl_hash_t`] instead to implement [`Hash<T>`] for all `T`
-pub use hash_t_macros::impl_hash_u64;
-
 /// Implement [`Hash<T>`] for types that already implement `::core::hash::Hash`.
 /// This will panic if `::core::hash::Hasher::finish` is called during hashing.
 /// You can use [`impl_hash_u64`] instead to only implement [`Hash<u64>`].
+///
+/// ```
+/// # use hash_t::*;
+/// # #[derive(Hash)]
+/// # struct MyType;
+/// // Implements `Hash<T>` for `MyType`.
+/// impl_hash_t!(MyType);
+/// ```
+///
+/// You can pass multiple types as arguments. Types are separated by `;`.
+///
+/// ```
+/// # use hash_t::*;
+/// # #[derive(Hash)]
+/// # struct MyOtherType<T>(T);
+/// // Implements `Hash<T>` for `MyOtherType<u32>` and `MyOtherType<u64>`.
+/// impl_hash_t!(MyOtherType<u32>; MyOtherType<u64>);
+/// ```
+///
+/// You can also pass generic types using the `impl` keyword.
+///
+/// ```
+/// # use hash_t::*;
+/// # use core::fmt::Display;
+/// # #[derive(Hash)]
+/// # struct MyType<T>(T);
+/// # #[derive(Hash)]
+/// # struct MyOtherType<'a, T, U, V>(core::marker::PhantomData<&'a (T, U, V)>);
+/// // Implements `Hash<T>` for `MyType` and `MyOtherType`.
+/// impl_hash_t! {
+///     impl<T> MyType<T>;
+///     impl<'a, T, U: 'a> MyOtherType<'a, T, u32, U> where Self: Display;
+/// }
+/// ```
 pub use hash_t_macros::impl_hash_t;
+
+/// Implement [`Hash<u64>`] for types that already implement `::core::hash::Hash`.
+/// If you know the hashed type doesn't call `::core::hash::Hasher::finish` during hashing,
+/// you can use [`impl_hash_t`] instead to implement [`Hash<T>`] for all `T`
+///
+/// ```
+/// # use hash_t::*;
+/// # #[derive(Hash)]
+/// # struct MyType;
+/// // Implements `Hash<u64>` for `MyType`.
+/// impl_hash_u64!(MyType);
+/// ```
+///
+/// You can pass multiple types as arguments. Types are separated by `;`.
+///
+/// ```
+/// # use hash_t::*;
+/// # #[derive(Hash)]
+/// # struct MyOtherType<T>(T);
+/// // Implements `Hash<u64>` for `MyOtherType<u32>` and `MyOtherType<u64>`.
+/// impl_hash_u64!(MyOtherType<u32>; MyOtherType<u64>);
+/// ```
+///
+/// You can also pass generic types using the `impl` keyword.
+///
+/// ```
+/// # use hash_t::*;
+/// # use core::fmt::Display;
+/// # #[derive(Hash)]
+/// # struct MyType<T>(T);
+/// # #[derive(Hash)]
+/// # struct MyOtherType<'a, T, U, V>(core::marker::PhantomData<&'a (T, U, V)>);
+/// // Implements `Hash<u64>` for `MyType` and `MyOtherType`.
+/// impl_hash_u64! {
+///     impl<T> MyType<T>;
+///     impl<'a, T, U: 'a> MyOtherType<'a, T, u32, U> where Self: Display;
+/// }
+/// ```
+pub use hash_t_macros::impl_hash_u64;
 
 #[cfg(test)]
 macro_rules! test_bytes_hash {
@@ -132,8 +200,6 @@ macro_rules! impl_hasher_fwd_writes {
     )* };
 }
 
-#[doc(hidden)]
-#[macro_export]
 macro_rules! impl_hasher_fwd {
     () => {
         #[inline(always)]
@@ -813,6 +879,23 @@ pub mod internal {
         #[inline(always)]
         fn finish(&self) -> u64 {
             panic!("`core::hash::Hasher::finish` called while calculating generic hash");
+        }
+
+        impl_hasher_fwd!();
+    }
+
+    pub struct WrapU64ForCore<'a, H: Hasher<u64>>(&'a mut H);
+
+    impl<'a, H: Hasher<u64>> WrapU64ForCore<'a, H> {
+        pub fn new(hasher: &'a mut H) -> Self {
+            Self(hasher)
+        }
+    }
+
+    impl<H: Hasher<u64>> ::core::hash::Hasher for WrapU64ForCore<'_, H> {
+        #[inline(always)]
+        fn finish(&self) -> u64 {
+            H::finish(self.0)
         }
 
         impl_hasher_fwd!();

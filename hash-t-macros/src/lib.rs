@@ -117,10 +117,7 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
 
     input.generics.make_where_clause();
     let wc = input.generics.where_clause.as_mut().unwrap();
-    if !wc.predicates.empty_or_trailing() {
-        wc.predicates.push_punct(<Token![,]>::default());
-    }
-    let where_ = where_(Some(wc));
+    let where_ = fix_where(Some(wc));
     let SplitGenerics {
         lti,
         ltt,
@@ -241,44 +238,6 @@ pub fn impl_core_buildhasher(input: TokenStream1) -> TokenStream1 {
 }
 
 #[proc_macro]
-pub fn impl_hash_u64(input: TokenStream1) -> TokenStream1 {
-    let root = crate_root();
-    let hash_t = quote!(#root::Hash);
-    let hasher_t = quote!(#root::Hasher);
-
-    let input = parse_macro_input!(input as IdentsWithGenerics);
-    let mut output = TokenStream::new();
-
-    for IdentWithGenerics {
-        impl_generics,
-        ident,
-        use_generics,
-        where_clause,
-    } in input.punctuated
-    {
-        quote! {
-            impl #impl_generics #hash_t<u64> for #ident #use_generics #where_clause {
-                #[inline]
-                fn hash<H: #hasher_t<u64>>(&self, state: &mut H) {
-                    struct Wrap<'a, H: #hasher_t<u64>>(&'a mut H);
-                    impl <H: #hasher_t<u64>> ::core::hash::Hasher for Wrap<'_, H> {
-                        #[inline(always)]
-                        fn finish(&self) -> u64 {
-                            H::finish(self.0)
-                        }
-
-                        #root::impl_hasher_fwd!();
-                    }
-                    <Self as ::core::hash::Hash>::hash(self, &mut Wrap(state))
-                }
-            }
-        }
-        .to_tokens(&mut output);
-    }
-    output.into()
-}
-
-#[proc_macro]
 #[allow(non_snake_case)]
 pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
     let root = crate_root();
@@ -293,7 +252,7 @@ pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
         impl_generics,
         ident,
         use_generics,
-        where_clause,
+        mut where_clause,
     } in input.punctuated
     {
         let SplitGenerics {
@@ -306,9 +265,12 @@ pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
             wc,
         } = split_generics(&impl_generics);
         let (_, _, _, _) = (ltt, tpt, cpt, wc);
+        let where_ = fix_where(where_clause.as_mut());
 
         quote! {
-            impl<#(#lti,)* #T #(,#tpi)* #(,#cpi)*> #hash_t<#T> for #ident #use_generics #where_clause {
+            impl<#(#lti,)* #T #(,#tpi)* #(,#cpi)*> #hash_t<#T> for #ident #use_generics #where_ #where_clause
+                Self: ::core::hash::Hash,
+            {
                 #[inline]
                 fn hash<H: #hasher_t<#T>>(&self, state: &mut H) {
                     <Self as ::core::hash::Hash>::hash(
@@ -322,13 +284,53 @@ pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
     output.into()
 }
 
-fn where_(wc: Option<&WhereClause>) -> Option<Token![where]> {
+#[proc_macro]
+pub fn impl_hash_u64(input: TokenStream1) -> TokenStream1 {
+    let root = crate_root();
+    let hash_t = quote!(#root::Hash);
+    let hasher_t = quote!(#root::Hasher);
+
+    let input = parse_macro_input!(input as IdentsWithGenerics);
+    let mut output = TokenStream::new();
+
+    for IdentWithGenerics {
+        impl_generics,
+        ident,
+        use_generics,
+        mut where_clause,
+    } in input.punctuated
+    {
+        let where_ = fix_where(where_clause.as_mut());
+        quote! {
+            impl #impl_generics #hash_t<u64> for #ident #use_generics #where_ #where_clause
+                Self: ::core::hash::Hash,
+            {
+                #[inline]
+                fn hash<H: #hasher_t<u64>>(&self, state: &mut H) {
+                    <Self as ::core::hash::Hash>::hash(
+                        self, &mut #root::internal::WrapU64ForCore::new(state)
+                    )
+                }
+            }
+        }
+        .to_tokens(&mut output);
+    }
+    output.into()
+}
+
+fn fix_where(wc: Option<&mut WhereClause>) -> Option<Token![where]> {
     if let Some(wc) = wc {
         if wc.predicates.is_empty() {
-            return Some(wc.where_token);
+            Some(wc.where_token)
+        } else {
+            if !wc.predicates.trailing_punct() {
+                wc.predicates.push_punct(<Token![,]>::default());
+            }
+            None
         }
+    } else {
+        Some(<Token![where]>::default())
     }
-    None
 }
 
 struct SplitGenerics<
