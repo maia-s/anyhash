@@ -189,10 +189,10 @@ impl<V: Version> SpookyV<V> {
         Self::with_seed(seed as u64, (seed >> 64) as u64)
     }
 
-    fn mix(data: *const u64, s: &mut [u64; SC_NUM_VARS]) {
+    fn mix(data: &[u64; SC_NUM_VARS], s: &mut [u64; SC_NUM_VARS]) {
         macro_rules! mix {
             ($($i:literal, $r:literal);* $(;)?) => { $(
-                s[$i] = s[$i].wrapping_add(unsafe { data.add($i).read() });
+                s[$i] = s[$i].wrapping_add(data[$i]);
                 s[($i + 2) % SC_NUM_VARS] ^= s[($i + 10) % SC_NUM_VARS];
                 s[($i + 11) % SC_NUM_VARS] ^= s[$i];
                 s[$i] = s[$i].rotate_left($r);
@@ -500,8 +500,18 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
                 );
             }
             u.p64 = self.data.as_mut_ptr();
-            Self::mix(unsafe { u.p64 }, &mut h);
-            Self::mix(unsafe { u.p64.add(SC_NUM_VARS) }, &mut h);
+            Self::mix(
+                unsafe { core::slice::from_raw_parts(u.p64, SC_NUM_VARS) }
+                    .try_into()
+                    .unwrap(),
+                &mut h,
+            );
+            Self::mix(
+                unsafe { core::slice::from_raw_parts(u.p64.add(SC_NUM_VARS), SC_NUM_VARS) }
+                    .try_into()
+                    .unwrap(),
+                &mut h,
+            );
             u.p8 = unsafe { bytes.as_ptr().add(prefix as usize) as *mut _ };
             length -= prefix as usize;
         } else {
@@ -512,7 +522,12 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
         let remainder = (length - (unsafe { (end as *const u8).offset_from(u.p8) as usize })) as u8;
         if unsafe { u.i } & 7 == 0 {
             while unsafe { u.p64 } < end {
-                Self::mix(unsafe { u.p64 }, &mut h);
+                Self::mix(
+                    unsafe { core::slice::from_raw_parts(u.p64, SC_NUM_VARS) }
+                        .try_into()
+                        .unwrap(),
+                    &mut h,
+                );
                 u.p64 = unsafe { u.p64.add(SC_NUM_VARS) };
             }
         } else {
@@ -547,7 +562,12 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
         let mut h = self.state;
 
         if remainder >= SC_BLOCK_SIZE as u8 {
-            Self::mix(data, &mut h);
+            Self::mix(
+                unsafe { core::slice::from_raw_parts(data, SC_NUM_VARS) }
+                    .try_into()
+                    .unwrap(),
+                &mut h,
+            );
             data = unsafe { data.add(SC_NUM_VARS) };
             remainder -= SC_BLOCK_SIZE as u8;
         }
@@ -563,7 +583,12 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
         }
 
         if V::VERSION == 1 {
-            Self::mix(data, &mut h);
+            Self::mix(
+                unsafe { core::slice::from_raw_parts(data, SC_NUM_VARS) }
+                    .try_into()
+                    .unwrap(),
+                &mut h,
+            );
         }
 
         Self::end(data, &mut h);
