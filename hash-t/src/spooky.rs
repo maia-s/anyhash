@@ -222,23 +222,25 @@ impl<V: Version> SpookyV<V> {
         let mut h = [self.state[0], self.state[1], SC_CONST, SC_CONST];
 
         if length > 15 {
-            let end: *const u64 = unsafe { u.p64.add((length / 32) * 4) };
-
-            while unsafe { u.p64 } as *const _ < end {
-                h[2] = h[2].wrapping_add(unsafe { u.p64.read() });
-                h[3] = h[3].wrapping_add(unsafe { u.p64.add(1).read() });
+            let mut i = length / 32 * 4;
+            for chunk in self.data[..i].chunks(4) {
+                h[2] = h[2].wrapping_add(chunk[0]);
+                h[3] = h[3].wrapping_add(chunk[1]);
                 Self::short_mix(&mut h);
-                h[0] = h[0].wrapping_add(unsafe { u.p64.add(2).read() });
-                h[1] = h[1].wrapping_add(unsafe { u.p64.add(3).read() });
-                u.p64 = unsafe { u.p64.add(4) };
+                h[0] = h[0].wrapping_add(chunk[2]);
+                h[1] = h[1].wrapping_add(chunk[3]);
             }
 
+            u.p64 = unsafe { u.p64.add(i) };
+
             if remainder >= 16 {
-                h[2] = h[2].wrapping_add(unsafe { u.p64.read() });
-                h[3] = h[3].wrapping_add(unsafe { u.p64.add(1).read() });
-                Self::short_mix(&mut h);
-                u.p64 = unsafe { u.p64.add(2) };
                 remainder -= 16;
+                h[2] = h[2].wrapping_add(self.data[i]);
+                h[3] = h[3].wrapping_add(self.data[i + 1]);
+                Self::short_mix(&mut h);
+                i += 2;
+
+                u.p64 = unsafe { u.p64.add(2) };
             }
         }
 
