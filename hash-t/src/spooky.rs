@@ -378,20 +378,20 @@ impl<V: Version> SpookyV<V> {
         }
     }
 
-    fn end(data: *const u64, h: &mut [u64; SC_NUM_VARS]) {
+    fn end(data: &[u64; SC_NUM_VARS], h: &mut [u64; SC_NUM_VARS]) {
         if V::VERSION == 2 {
-            h[0] = h[0].wrapping_add(unsafe { data.add(0).read() });
-            h[1] = h[1].wrapping_add(unsafe { data.add(1).read() });
-            h[2] = h[2].wrapping_add(unsafe { data.add(2).read() });
-            h[3] = h[3].wrapping_add(unsafe { data.add(3).read() });
-            h[4] = h[4].wrapping_add(unsafe { data.add(4).read() });
-            h[5] = h[5].wrapping_add(unsafe { data.add(5).read() });
-            h[6] = h[6].wrapping_add(unsafe { data.add(6).read() });
-            h[7] = h[7].wrapping_add(unsafe { data.add(7).read() });
-            h[8] = h[8].wrapping_add(unsafe { data.add(8).read() });
-            h[9] = h[9].wrapping_add(unsafe { data.add(9).read() });
-            h[10] = h[10].wrapping_add(unsafe { data.add(10).read() });
-            h[11] = h[11].wrapping_add(unsafe { data.add(11).read() });
+            h[0] = h[0].wrapping_add(data[0]);
+            h[1] = h[1].wrapping_add(data[1]);
+            h[2] = h[2].wrapping_add(data[2]);
+            h[3] = h[3].wrapping_add(data[3]);
+            h[4] = h[4].wrapping_add(data[4]);
+            h[5] = h[5].wrapping_add(data[5]);
+            h[6] = h[6].wrapping_add(data[6]);
+            h[7] = h[7].wrapping_add(data[7]);
+            h[8] = h[8].wrapping_add(data[8]);
+            h[9] = h[9].wrapping_add(data[9]);
+            h[10] = h[10].wrapping_add(data[10]);
+            h[11] = h[11].wrapping_add(data[11]);
         }
         Self::end_partial(h);
         Self::end_partial(h);
@@ -591,7 +591,12 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
             );
         }
 
-        Self::end(data, &mut h);
+        Self::end(
+            unsafe { core::slice::from_raw_parts(data, SC_NUM_VARS) }
+                .try_into()
+                .unwrap(),
+            &mut h,
+        );
 
         h[0] as u128 | ((h[1] as u128) << 64)
     }
