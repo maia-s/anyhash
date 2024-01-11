@@ -123,7 +123,7 @@ pub use hash_t_macros::impl_core_hasher;
 /// #   fn build_hasher(&self) -> Self::Hasher { H }
 /// # }
 /// // Implements `::core::Hash:BuildHasher` for `MyType`.
-/// impl_core_buildhasher!(MyType);
+/// impl_core_build_hasher!(MyType);
 /// ```
 ///
 /// You can pass multiple types as arguments. Types are separated by `;`.
@@ -141,7 +141,7 @@ pub use hash_t_macros::impl_core_hasher;
 /// #   fn build_hasher(&self) -> Self::Hasher { H }
 /// # }
 /// // Implements `::core::Hash:BuildHasher` for `MyOtherType<u32>` and `MyOtherType<u64>`.
-/// impl_core_buildhasher!(MyOtherType<u32>; MyOtherType<u64>);
+/// impl_core_build_hasher!(MyOtherType<u32>; MyOtherType<u64>);
 /// ```
 ///
 /// You can also pass generic types using the `impl` keyword.
@@ -165,12 +165,12 @@ pub use hash_t_macros::impl_core_hasher;
 /// #   fn build_hasher(&self) -> Self::Hasher { H }
 /// # }
 /// // Implements `Hash<T>` for `MyType` and `MyOtherType`.
-/// impl_core_buildhasher! {
+/// impl_core_build_hasher! {
 ///     impl<T> MyType<T>;
 ///     impl<'a, T, U: 'a> MyOtherType<'a, T, u32, U> where Self: Display;
 /// }
 /// ```
-pub use hash_t_macros::impl_core_buildhasher;
+pub use hash_t_macros::impl_core_build_hasher;
 
 /// Implement [`Hash<T>`] for types that already implement `::core::hash::Hash`.
 /// This will panic if `::core::hash::Hasher::finish` is called during hashing.

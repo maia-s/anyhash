@@ -209,7 +209,7 @@ pub fn impl_core_hasher(input: TokenStream1) -> TokenStream1 {
 }
 
 #[proc_macro]
-pub fn impl_core_buildhasher(input: TokenStream1) -> TokenStream1 {
+pub fn impl_core_build_hasher(input: TokenStream1) -> TokenStream1 {
     let root = crate_root();
     let build_hasher_t = quote!(#root::BuildHasher);
 
