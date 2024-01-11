@@ -327,6 +327,9 @@ macro_rules! impl_hasher_core_fwd {
 #[cfg(feature = "fnv1a")]
 pub mod fnv1a;
 
+#[cfg(feature = "spooky")]
+pub mod spooky;
+
 #[cfg(feature = "xxh64")]
 pub mod xxh64;
 
