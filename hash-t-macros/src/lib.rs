@@ -184,14 +184,11 @@ pub fn impl_core_hasher(input: TokenStream1) -> TokenStream1 {
         impl_generics,
         ident,
         use_generics,
-        mut where_clause,
+        where_clause,
     } in input.punctuated
     {
-        let where_ = fix_where(where_clause.as_mut());
         quote! {
-            impl #impl_generics ::core::hash::Hasher for #ident #use_generics #where_ #where_clause
-                Self: #hasher_t<u64>,
-            {
+            impl #impl_generics ::core::hash::Hasher for #ident #use_generics #where_clause {
                 #[inline(always)]
                 fn finish(&self) -> u64 {
                     <Self as #hasher_t::<u64>>::finish(self)
