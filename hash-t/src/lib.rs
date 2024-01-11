@@ -570,6 +570,8 @@ pub trait BuildHasher<T> {
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to little endian.
 pub struct HasherLe<T, U: Hasher<T>>(U, PhantomData<fn() -> T>);
 
+impl_core_hasher!(impl<T, U: Hasher<T>> HasherLe<T, U>);
+
 impl<T, U: Hasher<T>> HasherLe<T, U> {
     /// Create a new `HasherLe`.
     pub const fn new(hasher: U) -> Self {
@@ -628,6 +630,8 @@ impl<T, U: Hasher<T>> Hasher<T> for HasherLe<T, U> {
 
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to big endian.
 pub struct HasherBe<T, U: Hasher<T>>(U, PhantomData<fn() -> T>);
+
+impl_core_hasher!(impl<T, U: Hasher<T>> HasherBe<T, U>);
 
 impl<T, U: Hasher<T>> HasherBe<T, U> {
     /// Create a new `HasherBe`.
@@ -688,6 +692,8 @@ impl<T, U: Hasher<T>> Hasher<T> for HasherBe<T, U> {
 /// `BuildHasher` for making [`HasherLe`] hashers.
 pub struct BuildHasherLe<T, U: BuildHasher<T>>(U, PhantomData<fn() -> T>);
 
+impl_core_build_hasher!(impl<T, U: BuildHasher<T>> BuildHasherLe<T, U>);
+
 impl<T, U: BuildHasher<T>> BuildHasherLe<T, U> {
     /// Create a new `BuildHasherLe`.
     pub const fn new(build_hasher: U) -> Self {
@@ -712,6 +718,8 @@ impl<T, U: BuildHasher<T> + Default> Default for BuildHasherLe<T, U> {
 
 /// `BuildHasher` for making [`HasherBe`] hashers.
 pub struct BuildHasherBe<T, U: BuildHasher<T>>(U, PhantomData<fn() -> T>);
+
+impl_core_build_hasher!(impl<T, U: BuildHasher<T>> BuildHasherBe<T, U>);
 
 impl<T, U: BuildHasher<T>> BuildHasherBe<T, U> {
     /// Create a new `BuildHasherBe`.

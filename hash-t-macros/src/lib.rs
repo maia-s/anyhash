@@ -184,11 +184,14 @@ pub fn impl_core_hasher(input: TokenStream1) -> TokenStream1 {
         impl_generics,
         ident,
         use_generics,
-        where_clause,
+        mut where_clause,
     } in input.punctuated
     {
+        let where_ = fix_where(where_clause.as_mut());
         quote! {
-            impl #impl_generics ::core::hash::Hasher for #ident #use_generics #where_clause {
+            impl #impl_generics ::core::hash::Hasher for #ident #use_generics #where_ #where_clause
+                Self: #hasher_t<u64>,
+            {
                 #[inline(always)]
                 fn finish(&self) -> u64 {
                     <Self as #hasher_t::<u64>>::finish(self)
@@ -217,11 +220,14 @@ pub fn impl_core_build_hasher(input: TokenStream1) -> TokenStream1 {
         impl_generics,
         ident,
         use_generics,
-        where_clause,
+        mut where_clause,
     } in input.punctuated
     {
+        let where_ = fix_where(where_clause.as_mut());
         quote! {
-            impl #impl_generics ::core::hash::BuildHasher for #ident #use_generics #where_clause {
+            impl #impl_generics ::core::hash::BuildHasher for #ident #use_generics #where_ #where_clause
+                Self: #build_hasher_t<u64>,
+            {
                 type Hasher = #root::internal::WrapU64ForCoreOwned<<Self as #build_hasher_t::<u64>>::Hasher>;
 
                 fn build_hasher(&self) -> Self::Hasher {
