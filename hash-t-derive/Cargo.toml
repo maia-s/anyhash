@@ -6,3 +6,12 @@ authors = ["Maia <66437537+maia-s@users.noreply.github.com>"]
 
 [lib]
 proc-macro = true
+
+[dependencies]
+proc-macro2 = { version = "1.0" }
+quote = { version = "1.0" }
+
+[dependencies.syn]
+version = "2.0"
+default-features = false
+features = ["clone-impls", "derive", "parsing", "printing", "proc-macro"]

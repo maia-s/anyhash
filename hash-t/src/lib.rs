@@ -11,6 +11,8 @@
 #![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
 #![deny(missing_docs)]
 
+extern crate self as hash_t;
+
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
