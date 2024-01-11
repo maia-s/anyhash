@@ -2,6 +2,27 @@
 
 // referenced from https://burtleburtle.net/bob/hash/spooky.html
 
+macro_rules! fallthrough_jump_table {
+    (switch ($expr:expr) {
+        $( $label:lifetime: $pat:pat => $body:expr, )*
+        @ $exitlabel:lifetime:
+    }) => {
+        fallthrough_jump_table!(@ {
+            match $expr {
+                $($pat => break $label,)*
+            }
+        } $($label: $body,)* $exitlabel);
+    };
+
+    (@ $build:tt $label:lifetime: $body:expr, $($rest:tt)*) => {
+        fallthrough_jump_table!(@ { $label: $build $body } $($rest)*);
+    };
+
+    (@ $build:tt $label:lifetime) => {
+        $label: $build
+    };
+}
+
 use core::marker::PhantomData;
 
 use crate::{impl_core_build_hasher, impl_core_hasher};
@@ -223,6 +244,7 @@ impl<V: Version> SpookyV<V> {
 
         if length > 15 {
             let mut i = length / 32 * 4;
+
             for chunk in self.data[..i].chunks(4) {
                 h[2] = h[2].wrapping_add(chunk[0]);
                 h[3] = h[3].wrapping_add(chunk[1]);
@@ -250,96 +272,76 @@ impl<V: Version> SpookyV<V> {
             h[3] = h[3].wrapping_add((length as u64).rotate_left(56));
         }
 
-        'fallthrough: loop {
-            match remainder {
-                15 => {
+        fallthrough_jump_table! {
+            switch (remainder) {
+                'r15: 15 => {
                     h[3] =
                         h[3].wrapping_add(unsafe { (u.p8.add(14)).read() as u64 }.rotate_left(48));
-                    remainder -= 1;
-                    continue 'fallthrough;
-                }
-                14 => {
+                },
+                'r14: 14 => {
                     h[3] =
                         h[3].wrapping_add(unsafe { (u.p8.add(13)).read() as u64 }.rotate_left(40));
-                    remainder -= 1;
-                    continue 'fallthrough;
-                }
-                13 => {
+                },
+                'r13: 13 => {
                     h[3] =
                         h[3].wrapping_add(unsafe { (u.p8.add(12)).read() as u64 }.rotate_left(32));
-                    remainder -= 1;
-                    continue 'fallthrough;
-                }
-                12 => {
+                },
+                'r12: 12 => {
                     h[3] = h[3].wrapping_add(unsafe { u.p32.add(2).read() } as u64);
                     h[2] = h[2].wrapping_add(unsafe { u.p64.read() });
-                    break;
-                }
-                11 => {
+                    break 'done;
+                },
+                'r11: 11 => {
                     h[3] =
                         h[3].wrapping_add(unsafe { (u.p8.add(10)).read() as u64 }.rotate_left(16));
-                    remainder -= 1;
-                    continue 'fallthrough;
-                }
-                10 => {
+                },
+                'r10: 10 => {
                     h[3] = h[3].wrapping_add(unsafe { (u.p8.add(9)).read() as u64 }.rotate_left(8));
-                    remainder -= 1;
-                    continue 'fallthrough;
-                }
-                9 => {
+                },
+                'r9: 9 => {
                     h[3] = h[3].wrapping_add(unsafe { (u.p8.add(8)).read() as u64 });
-                    remainder -= 1;
-                    continue 'fallthrough;
-                }
-                8 => {
+                },
+                'r8: 8 => {
                     h[2] = h[2].wrapping_add(unsafe { u.p64.read() });
-                    break;
-                }
-                7 => {
+                    break 'done;
+                },
+                'r7: 7 => {
                     h[2] =
                         h[2].wrapping_add(unsafe { (u.p8.add(6)).read() as u64 }.rotate_left(48));
-                    remainder -= 1;
-                    continue 'fallthrough;
-                }
-                6 => {
+                },
+                'r6: 6 => {
                     h[2] =
                         h[2].wrapping_add(unsafe { (u.p8.add(5)).read() as u64 }.rotate_left(40));
-                    remainder -= 1;
-                    continue 'fallthrough;
-                }
-                5 => {
+                },
+                'r5: 5 => {
                     h[2] =
                         h[2].wrapping_add(unsafe { (u.p8.add(4)).read() as u64 }.rotate_left(32));
-                    remainder -= 1;
-                    continue 'fallthrough;
-                }
-                4 => {
+                },
+                'r4: 4 => {
                     h[2] = h[2].wrapping_add(unsafe { u.p32.read() } as u64);
-                    break;
-                }
-                3 => {
+                    break 'done;
+                },
+                'r3: 3 => {
                     h[2] =
                         h[2].wrapping_add(unsafe { (u.p8.add(2)).read() as u64 }.rotate_left(16));
-                    remainder -= 1;
-                    continue 'fallthrough;
-                }
-                2 => {
+                },
+                'r2: 2 => {
                     h[2] = h[2].wrapping_add(unsafe { (u.p8.add(1)).read() as u64 }.rotate_left(8));
-                    remainder -= 1;
-                    continue 'fallthrough;
-                }
-                1 => {
+                },
+                'r1: 1 => {
                     h[2] = h[2].wrapping_add(unsafe { u.p8.read() as u64 });
-                    break;
-                }
-                0 => {
+                    break 'done;
+                },
+                'r0: 0 => {
                     h[2] = h[2].wrapping_add(SC_CONST);
                     h[3] = h[3].wrapping_add(SC_CONST);
-                    break;
-                }
-                _ => unreachable!(),
+                    break 'done;
+                },
+                'error: _ => unreachable!(),
+                @ 'done:
             }
         }
+
         Self::short_end(&mut h);
         h[0] as u128 | ((h[1] as u128) << 64)
     }
