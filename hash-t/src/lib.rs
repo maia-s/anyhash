@@ -23,12 +23,153 @@ extern crate std;
 pub use hash_t_macros::HashT;
 
 /// Implement `::core::Hash::Hash` for types that already implement [`Hash<u64>`].
+///
+/// ```
+/// # use hash_t::*;
+/// # #[derive(HashT)]
+/// # struct MyType;
+/// // Implements `::core::Hash:Hash` for `MyType`.
+/// impl_core_hash!(MyType);
+/// ```
+///
+/// You can pass multiple types as arguments. Types are separated by `;`.
+///
+/// ```
+/// # use hash_t::*;
+/// # #[derive(HashT)]
+/// # struct MyOtherType<T>(T);
+/// // Implements `::core::Hash:Hash` for `MyOtherType<u32>` and `MyOtherType<u64>`.
+/// impl_core_hash!(MyOtherType<u32>; MyOtherType<u64>);
+/// ```
+///
+/// You can also pass generic types using the `impl` keyword.
+///
+/// ```
+/// # use hash_t::*;
+/// # use core::fmt::Display;
+/// # #[derive(HashT)]
+/// # struct MyType<T>(T);
+/// # #[derive(HashT)]
+/// # struct MyOtherType<'a, T, U, V>(core::marker::PhantomData<&'a (T, U, V)>);
+/// // Implements `::core::Hash:Hash` for `MyType` and `MyOtherType`.
+/// impl_core_hash! {
+///     impl<T> MyType<T>;
+///     impl<'a, T, U: 'a> MyOtherType<'a, T, u32, U> where Self: Display;
+/// }
+/// ```
 pub use hash_t_macros::impl_core_hash;
 
 /// Implement `::core::Hash::Hasher` for types that already implement [`Hasher<u64>`].
+///
+/// ```
+/// # use hash_t::*;
+/// # struct MyType;
+/// # impl Hasher<u64> for MyType {
+/// #   fn finish(&self) -> u64 { 0 }
+/// #   fn write(&mut self, _: &[u8]) {}
+/// # }
+/// // Implements `::core::Hash:Hasher` for `MyType`.
+/// impl_core_hasher!(MyType);
+/// ```
+///
+/// You can pass multiple types as arguments. Types are separated by `;`.
+///
+/// ```
+/// # use hash_t::*;
+/// # struct MyOtherType<T>(T);
+/// # impl<T> Hasher<u64> for MyOtherType<T> {
+/// #   fn finish(&self) -> u64 { 0 }
+/// #   fn write(&mut self, _: &[u8]) {}
+/// # }
+/// // Implements `::core::Hash:Hasher` for `MyOtherType<u32>` and `MyOtherType<u64>`.
+/// impl_core_hasher!(MyOtherType<u32>; MyOtherType<u64>);
+/// ```
+///
+/// You can also pass generic types using the `impl` keyword.
+///
+/// ```
+/// # use hash_t::*;
+/// # use core::fmt::Display;
+/// # struct MyType<T>(T);
+/// # impl<T> Hasher<u64> for MyType<T> {
+/// #   fn finish(&self) -> u64 { 0 }
+/// #   fn write(&mut self, _: &[u8]) {}
+/// # }
+/// # struct MyOtherType<'a, T, U, V>(core::marker::PhantomData<&'a (T, U, V)>);
+/// # impl<'a, T, U, V> Hasher<u64> for MyOtherType<'a, T, U, V> {
+/// #   fn finish(&self) -> u64 { 0 }
+/// #   fn write(&mut self, _: &[u8]) {}
+/// # }
+/// // Implements `::core::Hash:Hasher` for `MyType` and `MyOtherType`.
+/// impl_core_hasher! {
+///     impl<T> MyType<T>;
+///     impl<'a, T, U: 'a> MyOtherType<'a, T, u32, U> where Self: Display;
+/// }
+/// ```
 pub use hash_t_macros::impl_core_hasher;
 
 /// Implement `::core::Hash::BuildHasher` for types that already implement [`BuildHasher<u64>`].
+///
+/// ```
+/// # use hash_t::*;
+/// # struct H;
+/// # impl Hasher<u64> for H {
+/// #   fn finish(&self) -> u64 { 0 }
+/// #   fn write(&mut self, _: &[u8]) {}
+/// # }
+/// # struct MyType;
+/// # impl BuildHasher<u64> for MyType {
+/// #   type Hasher = H;
+/// #   fn build_hasher(&self) -> Self::Hasher { H }
+/// # }
+/// // Implements `::core::Hash:BuildHasher` for `MyType`.
+/// impl_core_buildhasher!(MyType);
+/// ```
+///
+/// You can pass multiple types as arguments. Types are separated by `;`.
+///
+/// ```
+/// # use hash_t::*;
+/// # struct H;
+/// # impl Hasher<u64> for H {
+/// #   fn finish(&self) -> u64 { 0 }
+/// #   fn write(&mut self, _: &[u8]) {}
+/// # }
+/// # struct MyOtherType<T>(T);
+/// # impl<T> BuildHasher<u64> for MyOtherType<T> {
+/// #   type Hasher = H;
+/// #   fn build_hasher(&self) -> Self::Hasher { H }
+/// # }
+/// // Implements `::core::Hash:BuildHasher` for `MyOtherType<u32>` and `MyOtherType<u64>`.
+/// impl_core_buildhasher!(MyOtherType<u32>; MyOtherType<u64>);
+/// ```
+///
+/// You can also pass generic types using the `impl` keyword.
+///
+/// ```
+/// # use hash_t::*;
+/// # use core::fmt::Display;
+/// # struct H;
+/// # impl Hasher<u64> for H {
+/// #   fn finish(&self) -> u64 { 0 }
+/// #   fn write(&mut self, _: &[u8]) {}
+/// # }
+/// # struct MyType<T>(T);
+/// # impl<T> BuildHasher<u64> for MyType<T> {
+/// #   type Hasher = H;
+/// #   fn build_hasher(&self) -> Self::Hasher { H }
+/// # }
+/// # struct MyOtherType<'a, T, U, V>(core::marker::PhantomData<&'a (T, U, V)>);
+/// # impl<'a, T, U, V> BuildHasher<u64> for MyOtherType<'a, T, U, V> {
+/// #   type Hasher = H;
+/// #   fn build_hasher(&self) -> Self::Hasher { H }
+/// # }
+/// // Implements `Hash<T>` for `MyType` and `MyOtherType`.
+/// impl_core_buildhasher! {
+///     impl<T> MyType<T>;
+///     impl<'a, T, U: 'a> MyOtherType<'a, T, u32, U> where Self: Display;
+/// }
+/// ```
 pub use hash_t_macros::impl_core_buildhasher;
 
 /// Implement [`Hash<T>`] for types that already implement `::core::hash::Hash`.
@@ -192,32 +333,38 @@ macro_rules! impl_hasher_deref {
 }
 
 macro_rules! impl_hasher_fwd_writes {
-    ($($t:ty: $ne:ident),* $(,)?) => { $(
+    ([] $($t:ty: $ne:ident),* $(,)?) => { $(
         #[inline(always)]
-        fn $ne(&mut self, i: $t) {
-            H::$ne(self.0, i);
-        }
+        fn $ne(&mut self, i: $t) { H::$ne(self.0, i); }
+    )* };
+    ([&mut] $($t:ty: $ne:ident),* $(,)?) => { $(
+        #[inline(always)]
+        fn $ne(&mut self, i: $t) { H::$ne(&mut self.0, i); }
     )* };
 }
 
 macro_rules! impl_hasher_fwd {
-    () => {
+    () => { impl_hasher_fwd!(@); };
+    (ref) => { impl_hasher_fwd!(@ &mut); };
+
+    (@ $($ref:tt)*) => {
         #[inline(always)]
         fn write(&mut self, bytes: &[u8]) {
-            H::write(self.0, bytes)
+            H::write($($ref)* self.0, bytes)
         }
 
         #[inline(always)]
         fn write_u8(&mut self, i: u8) {
-            H::write_u8(self.0, i)
+            H::write_u8($($ref)* self.0, i)
         }
 
         #[inline(always)]
         fn write_i8(&mut self, i: i8) {
-            H::write_i8(self.0, i)
+            H::write_i8($($ref)* self.0, i)
         }
 
         impl_hasher_fwd_writes! {
+            [$($ref)*]
             u16: write_u16,
             u32: write_u32,
             u64: write_u64,
@@ -233,13 +380,13 @@ macro_rules! impl_hasher_fwd {
         #[cfg(feature = "nightly")]
         #[inline(always)]
         fn write_length_prefix(&mut self, len: usize) {
-            H::write_length_prefix(self.0, len)
+            H::write_length_prefix($($ref)* self.0, len)
         }
 
         #[cfg(feature = "nightly")]
         #[inline(always)]
         fn write_str(&mut self, s: &str) {
-            H::write_str(self.0, s)
+            H::write_str($($ref)* self.0, s)
         }
     };
 }
@@ -867,6 +1014,7 @@ pub mod internal {
 
     use super::*;
 
+    #[repr(transparent)]
     pub struct WrapCoreForGen<'a, T, H: Hasher<T>>(&'a mut H, PhantomData<T>);
 
     impl<'a, T, H: Hasher<T>> WrapCoreForGen<'a, T, H> {
@@ -884,6 +1032,25 @@ pub mod internal {
         impl_hasher_fwd!();
     }
 
+    #[repr(transparent)]
+    pub struct WrapCoreForU64<'a, H: core::hash::Hasher>(&'a mut H);
+
+    impl<'a, H: core::hash::Hasher> WrapCoreForU64<'a, H> {
+        pub fn new(hasher: &'a mut H) -> Self {
+            Self(hasher)
+        }
+    }
+
+    impl<H: ::core::hash::Hasher> Hasher<u64> for WrapCoreForU64<'_, H> {
+        #[inline(always)]
+        fn finish(&self) -> u64 {
+            H::finish(self.0)
+        }
+
+        impl_hasher_fwd!();
+    }
+
+    #[repr(transparent)]
     pub struct WrapU64ForCore<'a, H: Hasher<u64>>(&'a mut H);
 
     impl<'a, H: Hasher<u64>> WrapU64ForCore<'a, H> {
@@ -899,6 +1066,24 @@ pub mod internal {
         }
 
         impl_hasher_fwd!();
+    }
+
+    #[repr(transparent)]
+    pub struct WrapU64ForCoreOwned<H: Hasher<u64>>(H);
+
+    impl<H: Hasher<u64>> WrapU64ForCoreOwned<H> {
+        pub fn new(hasher: H) -> Self {
+            Self(hasher)
+        }
+    }
+
+    impl<H: Hasher<u64>> ::core::hash::Hasher for WrapU64ForCoreOwned<H> {
+        #[inline(always)]
+        fn finish(&self) -> u64 {
+            H::finish(&self.0)
+        }
+
+        impl_hasher_fwd!(ref);
     }
 }
 

@@ -142,6 +142,7 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
 #[proc_macro]
 pub fn impl_core_hash(input: TokenStream1) -> TokenStream1 {
     let root = crate_root();
+    let hash_t = quote!(#root::Hash);
 
     let input = parse_macro_input!(input as IdentsWithGenerics);
     let mut output = TokenStream::new();
@@ -150,23 +151,19 @@ pub fn impl_core_hash(input: TokenStream1) -> TokenStream1 {
         impl_generics,
         ident,
         use_generics,
-        where_clause,
+        mut where_clause,
     } in input.punctuated
     {
+        let where_ = fix_where(where_clause.as_mut());
         quote! {
-            impl #impl_generics ::core::hash::Hash for #ident #use_generics #where_clause {
+            impl #impl_generics ::core::hash::Hash for #ident #use_generics #where_ #where_clause
+                Self: #hash_t<u64>,
+            {
                 #[inline]
                 fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
-                    struct Wrap<'a, H: ::core::hash::Hasher>(&'a mut H);
-                    impl<H: ::core::hash::Hasher> $crate::Hasher<u64> for Wrap<'_, H> {
-                        #[inline(always)]
-                        fn finish(&self) -> u64 {
-                            H::finish(self.0)
-                        }
-
-                        #root::impl_hasher_fwd!();
-                    }
-                    <Self as $crate::Hash<u64>>::hash(self, &mut Wrap(state))
+                    <Self as #hash_t<u64>>::hash(
+                        self, &mut #root::internal::WrapCoreForU64::new(state)
+                    )
                 }
             }
         }
@@ -187,11 +184,14 @@ pub fn impl_core_hasher(input: TokenStream1) -> TokenStream1 {
         impl_generics,
         ident,
         use_generics,
-        where_clause,
+        mut where_clause,
     } in input.punctuated
     {
+        let where_ = fix_where(where_clause.as_mut());
         quote! {
-            impl #impl_generics ::core::hash::Hasher for #ident #use_generics #where_clause {
+            impl #impl_generics ::core::hash::Hasher for #ident #use_generics #where_ #where_clause
+                Self: #hasher_t<u64>,
+            {
                 #[inline(always)]
                 fn finish(&self) -> u64 {
                     <Self as #hasher_t::<u64>>::finish(self)
@@ -225,10 +225,10 @@ pub fn impl_core_buildhasher(input: TokenStream1) -> TokenStream1 {
     {
         quote! {
             impl #impl_generics ::core::hash::BuildHasher for #ident #use_generics #where_clause {
-                type Hasher = <Self as #build_hasher_t::<u64>>::Hasher;
+                type Hasher = #root::internal::WrapU64ForCoreOwned<<Self as #build_hasher_t::<u64>>::Hasher>;
 
                 fn build_hasher(&self) -> Self::Hasher {
-                    <Self as #build_hasher_t::<u64>>::build_hasher(self)
+                    Self::Hasher::new(<Self as #build_hasher_t::<u64>>::build_hasher(self))
                 }
             }
         }
