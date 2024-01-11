@@ -335,7 +335,7 @@ macro_rules! impl_hasher_deref {
     };
 }
 
-macro_rules! impl_hasher_fwd_writes {
+macro_rules! impl_hasher_core_fwd_writes {
     ([] $($t:ty: $ne:ident),* $(,)?) => { $(
         #[inline(always)]
         fn $ne(&mut self, i: $t) { H::$ne(self.0, i); }
@@ -346,11 +346,8 @@ macro_rules! impl_hasher_fwd_writes {
     )* };
 }
 
-macro_rules! impl_hasher_fwd {
-    () => { impl_hasher_fwd!(@); };
-    (ref) => { impl_hasher_fwd!(@ &mut); };
-
-    (@ $($ref:tt)*) => {
+macro_rules! impl_hasher_core_fwd {
+    ($($ref:tt)*) => {
         #[inline(always)]
         fn write(&mut self, bytes: &[u8]) {
             H::write($($ref)* self.0, bytes)
@@ -366,7 +363,7 @@ macro_rules! impl_hasher_fwd {
             H::write_i8($($ref)* self.0, i)
         }
 
-        impl_hasher_fwd_writes! {
+        impl_hasher_core_fwd_writes! {
             [$($ref)*]
             u16: write_u16,
             u32: write_u32,
@@ -802,6 +799,10 @@ impl<T, U: BuildHasher<T> + Default> Default for BuildHasherBe<T, U> {
     fn default() -> Self {
         Self::new(U::default())
     }
+}
+
+impl<T, H: Hasher<T> + ?Sized> Hasher<T> for &mut H {
+    impl_hasher_deref!();
 }
 
 macro_rules! impl_hash_prim {
@@ -1293,7 +1294,7 @@ pub mod internal {
             panic!("`core::hash::Hasher::finish` called while calculating generic hash");
         }
 
-        impl_hasher_fwd!();
+        impl_hasher_core_fwd!();
     }
 
     #[repr(transparent)]
@@ -1312,45 +1313,26 @@ pub mod internal {
             H::finish(self.0)
         }
 
-        impl_hasher_fwd!();
+        impl_hasher_core_fwd!();
     }
 
     #[repr(transparent)]
-    pub struct WrapU64ForCore<'a, H: Hasher<u64>>(&'a mut H);
+    pub struct WrapU64ForCore<H: Hasher<u64>>(H);
 
-    impl<'a, H: Hasher<u64>> WrapU64ForCore<'a, H> {
-        #[inline(always)]
-        pub fn new(hasher: &'a mut H) -> Self {
-            Self(hasher)
-        }
-    }
-
-    impl<H: Hasher<u64>> ::core::hash::Hasher for WrapU64ForCore<'_, H> {
-        #[inline(always)]
-        fn finish(&self) -> u64 {
-            H::finish(self.0)
-        }
-
-        impl_hasher_fwd!();
-    }
-
-    #[repr(transparent)]
-    pub struct WrapU64ForCoreOwned<H: Hasher<u64>>(H);
-
-    impl<H: Hasher<u64>> WrapU64ForCoreOwned<H> {
+    impl<H: Hasher<u64>> WrapU64ForCore<H> {
         #[inline(always)]
         pub const fn new(hasher: H) -> Self {
             Self(hasher)
         }
     }
 
-    impl<H: Hasher<u64>> ::core::hash::Hasher for WrapU64ForCoreOwned<H> {
+    impl<H: Hasher<u64>> ::core::hash::Hasher for WrapU64ForCore<H> {
         #[inline(always)]
         fn finish(&self) -> u64 {
             H::finish(&self.0)
         }
 
-        impl_hasher_fwd!(ref);
+        impl_hasher_core_fwd!(&mut);
     }
 }
 

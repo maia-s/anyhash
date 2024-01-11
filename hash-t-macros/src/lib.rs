@@ -228,7 +228,7 @@ pub fn impl_core_build_hasher(input: TokenStream1) -> TokenStream1 {
             impl #impl_generics ::core::hash::BuildHasher for #ident #use_generics #where_ #where_clause
                 Self: #build_hasher_t<u64>,
             {
-                type Hasher = #root::internal::WrapU64ForCoreOwned<<Self as #build_hasher_t::<u64>>::Hasher>;
+                type Hasher = #root::internal::WrapU64ForCore<<Self as #build_hasher_t::<u64>>::Hasher>;
 
                 fn build_hasher(&self) -> Self::Hasher {
                     Self::Hasher::new(<Self as #build_hasher_t::<u64>>::build_hasher(self))
