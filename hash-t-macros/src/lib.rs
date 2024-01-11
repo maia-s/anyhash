@@ -271,7 +271,7 @@ pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
                 #[inline]
                 fn hash<H: #hasher_t<#T>>(&self, state: &mut H) {
                     <Self as ::core::hash::Hash>::hash(
-                        self, &mut #root::internal::WrapCoreForGen::new(state)
+                        self, &mut #root::internal::WrapCoreForT::new(state)
                     )
                 }
             }

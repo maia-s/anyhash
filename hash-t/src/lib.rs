@@ -607,13 +607,13 @@ impl<T, U: ?Sized + Hash<T>> Hash<T> for &mut U {
 
 impl<T, U: ?Sized> Hash<T> for *const U {
     fn hash<H: Hasher<T>>(&self, state: &mut H) {
-        <Self as ::core::hash::Hash>::hash(self, &mut internal::WrapCoreForGen::new(state))
+        <Self as ::core::hash::Hash>::hash(self, &mut internal::WrapCoreForT::new(state))
     }
 }
 
 impl<T, U: ?Sized> Hash<T> for *mut U {
     fn hash<H: Hasher<T>>(&self, state: &mut H) {
-        <Self as ::core::hash::Hash>::hash(self, &mut internal::WrapCoreForGen::new(state))
+        <Self as ::core::hash::Hash>::hash(self, &mut internal::WrapCoreForT::new(state))
     }
 }
 
@@ -1015,15 +1015,16 @@ pub mod internal {
     use super::*;
 
     #[repr(transparent)]
-    pub struct WrapCoreForGen<'a, T, H: Hasher<T>>(&'a mut H, PhantomData<T>);
+    pub struct WrapCoreForT<'a, T, H: Hasher<T>>(&'a mut H, PhantomData<T>);
 
-    impl<'a, T, H: Hasher<T>> WrapCoreForGen<'a, T, H> {
+    impl<'a, T, H: Hasher<T>> WrapCoreForT<'a, T, H> {
+        #[inline(always)]
         pub fn new(hasher: &'a mut H) -> Self {
             Self(hasher, PhantomData)
         }
     }
 
-    impl<T, H: Hasher<T>> core::hash::Hasher for WrapCoreForGen<'_, T, H> {
+    impl<T, H: Hasher<T>> core::hash::Hasher for WrapCoreForT<'_, T, H> {
         #[inline(always)]
         fn finish(&self) -> u64 {
             panic!("`core::hash::Hasher::finish` called while calculating generic hash");
@@ -1036,6 +1037,7 @@ pub mod internal {
     pub struct WrapCoreForU64<'a, H: core::hash::Hasher>(&'a mut H);
 
     impl<'a, H: core::hash::Hasher> WrapCoreForU64<'a, H> {
+        #[inline(always)]
         pub fn new(hasher: &'a mut H) -> Self {
             Self(hasher)
         }
@@ -1054,6 +1056,7 @@ pub mod internal {
     pub struct WrapU64ForCore<'a, H: Hasher<u64>>(&'a mut H);
 
     impl<'a, H: Hasher<u64>> WrapU64ForCore<'a, H> {
+        #[inline(always)]
         pub fn new(hasher: &'a mut H) -> Self {
             Self(hasher)
         }
@@ -1072,7 +1075,8 @@ pub mod internal {
     pub struct WrapU64ForCoreOwned<H: Hasher<u64>>(H);
 
     impl<H: Hasher<u64>> WrapU64ForCoreOwned<H> {
-        pub fn new(hasher: H) -> Self {
+        #[inline(always)]
+        pub const fn new(hasher: H) -> Self {
             Self(hasher)
         }
     }
