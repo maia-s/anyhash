@@ -240,6 +240,86 @@ pub fn impl_core_buildhasher(input: TokenStream1) -> TokenStream1 {
     output.into()
 }
 
+#[proc_macro]
+pub fn impl_hash_u64(input: TokenStream1) -> TokenStream1 {
+    let root = crate_root();
+    let hash_t = quote!(#root::Hash);
+    let hasher_t = quote!(#root::Hasher);
+
+    let input = parse_macro_input!(input as IdentsWithGenerics);
+    let mut output = TokenStream::new();
+
+    for IdentWithGenerics {
+        impl_generics,
+        ident,
+        use_generics,
+        where_clause,
+    } in input.punctuated
+    {
+        quote! {
+            impl #impl_generics #hash_t<u64> for #ident #use_generics #where_clause {
+                #[inline]
+                fn hash<H: #hasher_t<u64>>(&self, state: &mut H) {
+                    struct Wrap<'a, H: #hasher_t<u64>>(&'a mut H);
+                    impl <H: #hasher_t<u64>> ::core::hash::Hasher for Wrap<'_, H> {
+                        #[inline(always)]
+                        fn finish(&self) -> u64 {
+                            H::finish(self.0)
+                        }
+
+                        #root::impl_hasher_fwd!();
+                    }
+                    <Self as ::core::hash::Hash>::hash(self, &mut Wrap(state))
+                }
+            }
+        }
+        .to_tokens(&mut output);
+    }
+    output.into()
+}
+
+#[proc_macro]
+pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
+    let root = crate_root();
+    let hash_t = quote!(#root::Hash);
+    let hasher_t = quote!(#root::Hasher);
+
+    let input = parse_macro_input!(input as IdentsWithGenerics);
+    let mut output = TokenStream::new();
+
+    for IdentWithGenerics {
+        impl_generics,
+        ident,
+        use_generics,
+        where_clause,
+    } in input.punctuated
+    {
+        let SplitGenerics {
+            lti,
+            ltt,
+            tpi,
+            tpt,
+            cpi,
+            cpt,
+            wc,
+        } = split_generics(&impl_generics);
+        let (_, _, _, _) = (ltt, tpt, cpt, wc);
+
+        quote! {
+            impl<#(#lti,)* T #(,#tpi)* #(,#cpi)*> #hash_t<T> for #ident #use_generics #where_clause {
+                #[inline]
+                fn hash<H: #hasher_t<T>>(&self, state: &mut H) {
+                    <Self as ::core::hash::Hash>::hash(
+                        self, &mut #root::internal::WrapCoreForGen::new(state)
+                    )
+                }
+            }
+        }
+        .to_tokens(&mut output);
+    }
+    output.into()
+}
+
 fn where_(wc: Option<&WhereClause>) -> Option<Token![where]> {
     if let Some(wc) = wc {
         if wc.predicates.is_empty() {
@@ -300,7 +380,7 @@ impl Parse for IdentsWithGenerics {
 }
 
 struct IdentWithGenerics {
-    impl_generics: Option<Generics>,
+    impl_generics: Generics,
     ident: Ident,
     use_generics: Option<GenericArguments>,
     where_clause: Option<WhereClause>,
@@ -309,9 +389,9 @@ struct IdentWithGenerics {
 impl Parse for IdentWithGenerics {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let impl_generics = if Option::<Token![impl]>::parse(input)?.is_some() {
-            Some(Generics::parse(input)?)
+            Generics::parse(input)?
         } else {
-            None
+            Generics::default()
         };
         let ident = Ident::parse(input)?;
         let use_generics = if input.peek(Token![<]) {

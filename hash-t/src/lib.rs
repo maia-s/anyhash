@@ -31,6 +31,16 @@ pub use hash_t_macros::impl_core_hasher;
 /// Implement `::core::Hash::BuildHasher` for types that already implement [`BuildHasher<u64>`].
 pub use hash_t_macros::impl_core_buildhasher;
 
+/// Implement [`Hash<u64>`] for types that already implement `::core::hash::Hash`.
+/// If you know the hashed type doesn't call `::core::hash::Hasher::finish`,
+/// you can use [`impl_hash_t`] instead to implement [`Hash<T>`] for all `T`
+pub use hash_t_macros::impl_hash_u64;
+
+/// Implement [`Hash<T>`] for types that already implement `::core::hash::Hash`.
+/// This will panic if `::core::hash::Hasher::finish` is called during hashing.
+/// You can use [`impl_hash_u64`] instead to only implement [`Hash<u64>`].
+pub use hash_t_macros::impl_hash_t;
+
 #[cfg(test)]
 macro_rules! test_bytes_hash {
     ($([$hashfn:ident] $($bs:ident: $hash:expr),* $(,)?)*) => { $(
@@ -200,53 +210,6 @@ macro_rules! impl_hash_from_field {
             }
         }
     )*)* };
-}
-
-#[macro_export]
-/// Implement [`Hash<u64>`] for types that already implement `::core::hash::Hash`.
-/// If you know the hashed type doesn't call `::core::hash::Hasher::finish`,
-/// you can use [`impl_hash_t`] instead to implement [`Hash<T>`] for all `T`
-macro_rules! impl_hash_u64 {
-    ($($t:ident $(<
-        $($lt0:lifetime $(,$lt:lifetime)*)? $(,)? $($gen:ident $(: $con0:path $(: $con:path)*)?),*
-    >)?),* $(,)?) => { $(
-        impl<$($($lt0, $($lt,)*)? $($gen: $($con0 $(+ $con)*)?),*)?>
-        $crate::Hash<u64> for $t $(<$($lt0, $($lt,)*)? $($gen),*>)? {
-            #[inline]
-            fn hash<H: $crate::Hasher<u64>>(&self, state: &mut H) {
-                struct Wrap<'a, H: $crate::Hasher<u64>>(&'a mut H);
-                impl <H: $crate::Hasher<u64>> ::core::hash::Hasher for Wrap<'_, H> {
-                    #[inline(always)]
-                    fn finish(&self) -> u64 {
-                        H::finish(self.0)
-                    }
-
-                    impl_hasher_fwd!();
-                }
-                <Self as ::core::hash::Hash>::hash(self, &mut Wrap(state))
-            }
-        }
-    )* }
-}
-
-#[macro_export]
-/// Implement [`Hash<T>`] for types that already implement `::core::hash::Hash`.
-/// This will panic if `::core::hash::Hasher::finish` is called during hashing.
-/// You can use [`impl_hash_u64`] instead to only implement [`Hash<u64>`].
-macro_rules! impl_hash_t {
-    ($($t:ident $(<
-        $($lt0:lifetime $(,$lt:lifetime)*)? $(,)? $($gen:ident $(: $con0:path $(: $con:path)*)?),*
-    >)?),* $(,)?) => { $(
-        impl<$($($lt0, $($lt,)*)?)? T $($(, $gen: $($con0 $(+ $con)*)?),*)?>
-        $crate::Hash<T> for $t $(<$($lt0, $($lt,)*)? $($gen),*>)? {
-            #[inline]
-            fn hash<H: $crate::Hasher<T>>(&self, state: &mut H) {
-                <Self as ::core::hash::Hash>::hash(
-                    self, &mut $crate::internal::WrapCoreForGen::new(state)
-                )
-            }
-        }
-    )* }
 }
 
 #[cfg(feature = "fnv1a")]
@@ -527,7 +490,7 @@ mod core_impls {
         time::Duration,
     };
 
-    impl_hash_t!(Layout, TypeId);
+    impl_hash_t!(Layout; TypeId);
 
     impl<T> Hash<T> for Ordering {
         #[inline]
@@ -541,7 +504,7 @@ mod core_impls {
         fn hash<H: Hasher<T>>(&self, _: &mut H) {}
     }
 
-    impl_hash_t!(Discriminant<U>);
+    impl_hash_t!(impl<U> Discriminant<U>);
 
     impl<T, U: Hash<T>> Hash<T> for ManuallyDrop<U> {
         #[inline]
@@ -557,7 +520,7 @@ mod core_impls {
         }
     }
 
-    impl_hash_t!(SocketAddrV4, SocketAddrV6);
+    impl_hash_t!(SocketAddrV4; SocketAddrV6);
 
     impl<T> Hash<T> for IpAddr {
         #[inline]
@@ -590,7 +553,7 @@ mod core_impls {
     }
 
     // RangeInclusive has private internal state
-    impl_hash_t!(RangeInclusive<I: core::hash::Hash>);
+    impl_hash_t!(impl<I: core::hash::Hash> RangeInclusive<I>);
 
     impl<T, U: Hash<T>> Hash<T> for Bound<U> {
         #[inline]
@@ -625,7 +588,7 @@ mod core_impls {
         }
     }
 
-    impl_hash_t!(Location<'a>);
+    impl_hash_t!(Location<'_>);
 
     impl<T, P: Deref<Target = impl Hash<T>>> Hash<T> for Pin<P> {
         #[inline]
@@ -776,7 +739,7 @@ mod alloc_impls {
         }
     }
 
-    impl_hash_t!(BTreeSet<K: core::hash::Hash>);
+    impl_hash_t!(impl<K: core::hash::Hash> BTreeSet<K>);
 
     impl<T, U: Hash<T>> Hash<T> for LinkedList<U> {
         #[inline]
@@ -818,17 +781,17 @@ mod std_impls {
     };
 
     impl_hash_t!(
-        OsStr,
-        OsString,
-        FileType,
-        Path,
-        PathBuf,
-        PrefixComponent<'a>,
-        Component<'a>,
-        Prefix<'a>,
-        ThreadId,
-        Instant,
-        SystemTime
+        OsStr;
+        OsString;
+        FileType;
+        Path;
+        PathBuf;
+        PrefixComponent<'_>;
+        Component<'_>;
+        Prefix<'_>;
+        ThreadId;
+        Instant;
+        SystemTime;
     );
 }
 
