@@ -739,7 +739,7 @@ mod alloc_impls {
         }
     }
 
-    impl_hash_t!(impl<K: core::hash::Hash> BTreeSet<K>);
+    impl_hash_t!(impl<T: core::hash::Hash> BTreeSet<T>);
 
     impl<T, U: Hash<T>> Hash<T> for LinkedList<U> {
         #[inline]

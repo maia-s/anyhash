@@ -21,7 +21,7 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
     let root = crate_root();
     let hash_t = quote!(#root::Hash);
     let hasher_t = quote!(#root::Hasher);
-    let T = Ident::new("T", Span::mixed_site());
+    let T = Ident::new("__hash_t_T", Span::mixed_site());
 
     let mut input = parse_macro_input!(input as DeriveInput);
     let ident = input.ident;
@@ -279,10 +279,12 @@ pub fn impl_hash_u64(input: TokenStream1) -> TokenStream1 {
 }
 
 #[proc_macro]
+#[allow(non_snake_case)]
 pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
     let root = crate_root();
     let hash_t = quote!(#root::Hash);
     let hasher_t = quote!(#root::Hasher);
+    let T = Ident::new("__hash_t_T", Span::mixed_site());
 
     let input = parse_macro_input!(input as IdentsWithGenerics);
     let mut output = TokenStream::new();
@@ -306,9 +308,9 @@ pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
         let (_, _, _, _) = (ltt, tpt, cpt, wc);
 
         quote! {
-            impl<#(#lti,)* T #(,#tpi)* #(,#cpi)*> #hash_t<T> for #ident #use_generics #where_clause {
+            impl<#(#lti,)* #T #(,#tpi)* #(,#cpi)*> #hash_t<#T> for #ident #use_generics #where_clause {
                 #[inline]
-                fn hash<H: #hasher_t<T>>(&self, state: &mut H) {
+                fn hash<H: #hasher_t<#T>>(&self, state: &mut H) {
                     <Self as ::core::hash::Hash>::hash(
                         self, &mut #root::internal::WrapCoreForGen::new(state)
                     )
