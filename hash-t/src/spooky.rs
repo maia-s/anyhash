@@ -8,8 +8,8 @@ use crate::{impl_core_build_hasher, impl_core_hasher};
 
 use crate::{BuildHasher, Hasher};
 
-impl_core_build_hasher!(SpookyBuildHasher);
-impl_core_hasher!(Spooky);
+impl_core_build_hasher!(impl<V: Version> SpookyBuildHasherV<V>);
+impl_core_hasher!(impl<V: Version> SpookyV<V>);
 
 /// Version trait for SpookyHash.
 pub trait Version: Clone + core::fmt::Debug + Default {
@@ -17,11 +17,11 @@ pub trait Version: Clone + core::fmt::Debug + Default {
     const VERSION: usize;
 }
 
-/// Selector for SpookyHash V1.
+/// Selector for SpookyHash v1.
 #[derive(Clone, Debug, Default)]
 pub struct V1;
 
-/// Selector for SpookyHash V2.
+/// Selector for SpookyHash v2.
 #[derive(Clone, Debug, Default)]
 pub struct V2;
 
@@ -33,11 +33,14 @@ impl Version for V2 {
     const VERSION: usize = 2;
 }
 
+/// [`BuildHasher`] implementation for the [`Spooky`] v2 hasher.
+pub type SpookyBuildHasher = SpookyBuildHasherV<V2>;
+
 /// [`BuildHasher`] implementation for the [`Spooky`] hasher.
 #[derive(Clone, Debug)]
-pub struct SpookyBuildHasher<V: Version = V2>(u64, u64, PhantomData<fn() -> V>);
+pub struct SpookyBuildHasherV<V: Version = V2>(u64, u64, PhantomData<fn() -> V>);
 
-impl<V: Version> SpookyBuildHasher<V> {
+impl<V: Version> SpookyBuildHasherV<V> {
     /// Create a [`BuildHasher`] for [`Spooky`] with the default seed.
     #[inline]
     pub const fn new() -> Self {
@@ -57,8 +60,8 @@ impl<V: Version> SpookyBuildHasher<V> {
     }
 }
 
-impl<V: Version> BuildHasher<u32> for SpookyBuildHasher<V> {
-    type Hasher = Spooky<V>;
+impl<V: Version> BuildHasher<u32> for SpookyBuildHasherV<V> {
+    type Hasher = SpookyV<V>;
 
     #[inline]
     fn build_hasher(&self) -> Self::Hasher {
@@ -66,8 +69,8 @@ impl<V: Version> BuildHasher<u32> for SpookyBuildHasher<V> {
     }
 }
 
-impl<V: Version> BuildHasher<u64> for SpookyBuildHasher<V> {
-    type Hasher = Spooky<V>;
+impl<V: Version> BuildHasher<u64> for SpookyBuildHasherV<V> {
+    type Hasher = SpookyV<V>;
 
     #[inline]
     fn build_hasher(&self) -> Self::Hasher {
@@ -75,30 +78,24 @@ impl<V: Version> BuildHasher<u64> for SpookyBuildHasher<V> {
     }
 }
 
-impl<V: Version> BuildHasher<u128> for SpookyBuildHasher<V> {
-    type Hasher = Spooky<V>;
+impl<V: Version> BuildHasher<u128> for SpookyBuildHasherV<V> {
+    type Hasher = SpookyV<V>;
 
     #[inline]
     fn build_hasher(&self) -> Self::Hasher {
         Self::Hasher::with_seed(self.0, self.1)
     }
 }
+
+/// [`BuildHasher`] implementation for the [`Spooky`] v2 hasher using the default seed (zero sized).
+pub type SpookyDefaultBuildHasher = SpookyDefaultBuildHasherV<V2>;
 
 /// [`BuildHasher`] implementation for the [`Spooky`] hasher using the default seed (zero sized).
 #[derive(Clone, Debug, Default)]
-pub struct SpookyDefaultBuildHasher<V: Version = V2>(PhantomData<fn() -> V>);
+pub struct SpookyDefaultBuildHasherV<V: Version = V2>(PhantomData<fn() -> V>);
 
-impl<V: Version> BuildHasher<u32> for SpookyDefaultBuildHasher<V> {
-    type Hasher = Spooky<V>;
-
-    #[inline]
-    fn build_hasher(&self) -> Self::Hasher {
-        Self::Hasher::new()
-    }
-}
-
-impl<V: Version> BuildHasher<u64> for SpookyDefaultBuildHasher<V> {
-    type Hasher = Spooky<V>;
+impl<V: Version> BuildHasher<u32> for SpookyDefaultBuildHasherV<V> {
+    type Hasher = SpookyV<V>;
 
     #[inline]
     fn build_hasher(&self) -> Self::Hasher {
@@ -106,8 +103,17 @@ impl<V: Version> BuildHasher<u64> for SpookyDefaultBuildHasher<V> {
     }
 }
 
-impl<V: Version> BuildHasher<u128> for SpookyDefaultBuildHasher<V> {
-    type Hasher = Spooky<V>;
+impl<V: Version> BuildHasher<u64> for SpookyDefaultBuildHasherV<V> {
+    type Hasher = SpookyV<V>;
+
+    #[inline]
+    fn build_hasher(&self) -> Self::Hasher {
+        Self::Hasher::new()
+    }
+}
+
+impl<V: Version> BuildHasher<u128> for SpookyDefaultBuildHasherV<V> {
+    type Hasher = SpookyV<V>;
 
     #[inline]
     fn build_hasher(&self) -> Self::Hasher {
@@ -116,19 +122,19 @@ impl<V: Version> BuildHasher<u128> for SpookyDefaultBuildHasher<V> {
 }
 
 #[cfg(feature = "std")]
-/// `HashMap` from `std` configured to use the [`Spooky`] hasher.
+/// `HashMap` from `std` configured to use the [`Spooky`] v2 hasher.
 pub type SpookyHashMap<K, V> = std::collections::HashMap<K, V, SpookyBuildHasher>;
 
 #[cfg(feature = "std")]
-/// `HashMap` from `std` configured to use the [`Spooky`] hasher with the default seed.
+/// `HashMap` from `std` configured to use the [`Spooky`] v2 hasher with the default seed.
 pub type SpookyDefaultHashMap<K, V> = std::collections::HashMap<K, V, SpookyDefaultBuildHasher>;
 
 #[cfg(feature = "std")]
-/// `HashSet` from `std` configured to use the [`Spooky`] hasher.
+/// `HashSet` from `std` configured to use the [`Spooky`] v2 hasher.
 pub type SpookyHashSet<T> = std::collections::HashSet<T, SpookyBuildHasher>;
 
 #[cfg(feature = "std")]
-/// `HashSet` from `std` configured to use the [`Spooky`] hasher with the default seed.
+/// `HashSet` from `std` configured to use the [`Spooky`] v2 hasher with the default seed.
 pub type SpookyDefaultHashSet<T> = std::collections::HashSet<T, SpookyDefaultBuildHasher>;
 
 const SC_NUM_VARS: usize = 12;
@@ -136,9 +142,12 @@ const SC_BLOCK_SIZE: usize = SC_NUM_VARS * 8;
 const SC_BUF_SIZE: usize = SC_BLOCK_SIZE * 2;
 const SC_CONST: u64 = 0xdeadbeefdeadbeef;
 
+/// Hasher using the SpookyHash algorithm (v2).
+pub type Spooky = SpookyV<V2>;
+
 /// Hasher using the SpookyHash algorithm.
 #[derive(Clone)]
-pub struct Spooky<V: Version = V2> {
+pub struct SpookyV<V: Version = V2> {
     data: [u64; 2 * SC_NUM_VARS],
     state: [u64; SC_NUM_VARS],
     length: usize,
@@ -146,7 +155,7 @@ pub struct Spooky<V: Version = V2> {
     _pd: PhantomData<fn() -> V>,
 }
 
-impl<V: Version> Spooky<V> {
+impl<V: Version> SpookyV<V> {
     /// Create a new `Spooky` hasher with the default seed.
     #[inline]
     pub fn new() -> Self {
@@ -405,14 +414,14 @@ impl<V: Version> Spooky<V> {
     }
 }
 
-impl<V: Version> Default for Spooky<V> {
+impl<V: Version> Default for SpookyV<V> {
     #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<V: Version> Hasher<u32> for Spooky<V> {
+impl<V: Version> Hasher<u32> for SpookyV<V> {
     #[inline]
     fn finish(&self) -> u32 {
         <Self as Hasher<u128>>::finish(self) as u32
@@ -424,7 +433,7 @@ impl<V: Version> Hasher<u32> for Spooky<V> {
     }
 }
 
-impl<V: Version> Hasher<u64> for Spooky<V> {
+impl<V: Version> Hasher<u64> for SpookyV<V> {
     #[inline]
     fn finish(&self) -> u64 {
         <Self as Hasher<u128>>::finish(self) as u64
@@ -436,7 +445,7 @@ impl<V: Version> Hasher<u64> for Spooky<V> {
     }
 }
 
-impl<V: Version> Hasher<u128> for Spooky<V> {
+impl<V: Version> Hasher<u128> for SpookyV<V> {
     #[inline]
     fn write(&mut self, bytes: &[u8]) {
         let mut length = bytes.len();
@@ -652,7 +661,7 @@ mod tests {
 
         for i in 0..EXPECTED.len() {
             buf[i] = (i + 128) as u8;
-            let saw: u32 = SpookyDefaultBuildHasher::<V1>::default().hash_one(RawBytes(&buf[..i]));
+            let saw: u32 = SpookyDefaultBuildHasherV::<V1>::default().hash_one(RawBytes(&buf[..i]));
             assert_eq!(saw, EXPECTED[i], "wrong value at {i}");
         }
     }
@@ -740,8 +749,7 @@ mod tests {
 
         for i in 0..EXPECTED.len() {
             buf[i] = (i + 128) as u8;
-            let sdbh: SpookyDefaultBuildHasher = SpookyDefaultBuildHasher::default();
-            let saw: u32 = sdbh.hash_one(RawBytes(&buf[..i]));
+            let saw: u32 = SpookyDefaultBuildHasher::default().hash_one(RawBytes(&buf[..i]));
             assert_eq!(saw, EXPECTED[i], "wrong value at {i}");
         }
     }
