@@ -568,7 +568,7 @@ pub trait BuildHasher<T> {
 }
 
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to little endian.
-pub struct HasherLe<T, U: Hasher<T>>(U, PhantomData<T>);
+pub struct HasherLe<T, U: Hasher<T>>(U, PhantomData<fn() -> T>);
 
 impl<T, U: Hasher<T>> HasherLe<T, U> {
     /// Create a new `HasherLe`.
@@ -627,7 +627,7 @@ impl<T, U: Hasher<T>> Hasher<T> for HasherLe<T, U> {
 }
 
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to big endian.
-pub struct HasherBe<T, U: Hasher<T>>(U, PhantomData<T>);
+pub struct HasherBe<T, U: Hasher<T>>(U, PhantomData<fn() -> T>);
 
 impl<T, U: Hasher<T>> HasherBe<T, U> {
     /// Create a new `HasherBe`.
@@ -686,7 +686,7 @@ impl<T, U: Hasher<T>> Hasher<T> for HasherBe<T, U> {
 }
 
 /// `BuildHasher` for making [`HasherLe`] hashers.
-pub struct BuildHasherLe<T, U: BuildHasher<T>>(U, PhantomData<T>);
+pub struct BuildHasherLe<T, U: BuildHasher<T>>(U, PhantomData<fn() -> T>);
 
 impl<T, U: BuildHasher<T>> BuildHasherLe<T, U> {
     /// Create a new `BuildHasherLe`.
@@ -711,7 +711,7 @@ impl<T, U: BuildHasher<T> + Default> Default for BuildHasherLe<T, U> {
 }
 
 /// `BuildHasher` for making [`HasherBe`] hashers.
-pub struct BuildHasherBe<T, U: BuildHasher<T>>(U, PhantomData<T>);
+pub struct BuildHasherBe<T, U: BuildHasher<T>>(U, PhantomData<fn() -> T>);
 
 impl<T, U: BuildHasher<T>> BuildHasherBe<T, U> {
     /// Create a new `BuildHasherBe`.
@@ -1209,7 +1209,7 @@ pub mod internal {
     use super::*;
 
     #[repr(transparent)]
-    pub struct WrapCoreForT<'a, T, H: Hasher<T>>(&'a mut H, PhantomData<T>);
+    pub struct WrapCoreForT<'a, T, H: Hasher<T>>(&'a mut H, PhantomData<fn() -> T>);
 
     impl<'a, T, H: Hasher<T>> WrapCoreForT<'a, T, H> {
         #[inline(always)]
