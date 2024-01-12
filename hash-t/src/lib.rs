@@ -260,8 +260,7 @@ macro_rules! define_writes_for_hasher {
     };
 
     ($desc:literal: $c:ident) => {
-        /// Writes a single `u8` into this
-        #[doc = $desc]
+        /// Writes a single `u8` into this hasher.
         #[inline]
         fn write_u8(&mut self, i: u8) {
             self.write(&[i]);
@@ -276,8 +275,7 @@ macro_rules! define_writes_for_hasher {
             usize: write_usize,
         }
 
-        /// Writes a single `i8` into this
-        #[doc = $desc]
+        /// Writes a single `i8` into this hasher.
         #[inline]
         fn write_i8(&mut self, i: i8) {
             self.write(&[i as u8]);
@@ -447,8 +445,8 @@ pub trait BuildHasher<T> {
     }
 }
 
-/// Marker trait for hashers whose hashing algorithm calculates the same hash
-/// on hosts of different endiannesses, given the same byte stream.
+/// Marker trait for hashers that, given the same byte stream, calculates the same hash
+/// on hosts of different endiannesses.
 pub trait EndianIndependentAlgorithm {}
 
 /// Marker trait for hashers whose write methods write data in the same order
@@ -474,10 +472,10 @@ impl<T, H> EndianIndependentHasher<T> for H where
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to little endian.
 ///
 /// This can aid in creating an endian independent hash, but be aware that types may write endian
-/// dependent data in ways that can't be detected by this wrapper. The wrapped hasher's
-/// algorithm must also support endian independent hashing for this to work.
+/// dependent data in ways that can't be detected or fixed by this wrapper. The wrapped hasher's
+/// algorithm must also be endian independent for this to work.
 ///
-/// Endian independent hashers defined in this crate implement the [`EndianIndependentAlgorithm`] trait.
+/// Hashers with endian independent algorithms implement the [`EndianIndependentAlgorithm`] trait.
 pub struct HasherLe<T, H: Hasher<T>>(H, PhantomData<fn() -> T>);
 
 impl_core_hasher!(impl<T, H: Hasher<T>> HasherLe<T, H>);
@@ -531,10 +529,10 @@ impl<T, H: Hasher<T> + Default> Default for HasherLe<T, H> {
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to big endian.
 ///
 /// This can aid in creating an endian independent hash, but be aware that types may write endian
-/// dependent data in ways that can't be detected by this wrapper. The wrapped hasher's
-/// algorithm must also support endian independent hashing for this to work.
+/// dependent data in ways that can't be detected or fixed by this wrapper. The wrapped hasher's
+/// algorithm must also be endian independent for this to work.
 ///
-/// Endian independent hashers defined in this crate implement the [`EndianIndependentAlgorithm`] trait.
+/// Hashers with endian independent algorithms implement the [`EndianIndependentAlgorithm`] trait.
 pub struct HasherBe<T, H: Hasher<T>>(H, PhantomData<fn() -> T>);
 
 impl_core_hasher!(impl<T, H: Hasher<T>> HasherBe<T, H>);
