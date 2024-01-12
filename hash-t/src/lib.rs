@@ -777,17 +777,20 @@ pub mod internal {
         fn pun_slice_mut(&mut self) -> &mut [T];
     }
 
-    impl PunSlice<u64> for [u64] {
-        fn pun_slice(&self) -> &[u64] {
+    impl<T> PunSlice<T> for [T] {
+        #[inline]
+        fn pun_slice(&self) -> &[T] {
             self
         }
 
-        fn pun_slice_mut(&mut self) -> &mut [u64] {
+        #[inline]
+        fn pun_slice_mut(&mut self) -> &mut [T] {
             self
         }
     }
 
     impl PunSlice<u32> for [u64] {
+        #[inline]
         fn pun_slice(&self) -> &[u32] {
             let ptr = self.as_ptr();
             let len = self.len();
@@ -798,6 +801,7 @@ pub mod internal {
             }
         }
 
+        #[inline]
         fn pun_slice_mut(&mut self) -> &mut [u32] {
             let ptr = self.as_mut_ptr();
             let len = self.len();
@@ -810,6 +814,7 @@ pub mod internal {
     }
 
     impl PunSlice<u16> for [u64] {
+        #[inline]
         fn pun_slice(&self) -> &[u16] {
             let ptr = self.as_ptr();
             let len = self.len();
@@ -820,6 +825,7 @@ pub mod internal {
             }
         }
 
+        #[inline]
         fn pun_slice_mut(&mut self) -> &mut [u16] {
             let ptr = self.as_mut_ptr();
             let len = self.len();
@@ -832,6 +838,7 @@ pub mod internal {
     }
 
     impl PunSlice<u8> for [u64] {
+        #[inline]
         fn pun_slice(&self) -> &[u8] {
             let ptr = self.as_ptr();
             let len = self.len();
@@ -842,6 +849,7 @@ pub mod internal {
             }
         }
 
+        #[inline]
         fn pun_slice_mut(&mut self) -> &mut [u8] {
             let ptr = self.as_mut_ptr();
             let len = self.len();
@@ -858,7 +866,20 @@ pub mod internal {
         fn try_pun_slice_mut(&mut self) -> Option<&mut [T]>;
     }
 
+    impl<T> TryPunSlice<T> for [T] {
+        #[inline]
+        fn try_pun_slice(&self) -> Option<&[T]> {
+            Some(self)
+        }
+
+        #[inline]
+        fn try_pun_slice_mut(&mut self) -> Option<&mut [T]> {
+            Some(self)
+        }
+    }
+
     impl TryPunSlice<u64> for [u8] {
+        #[inline]
         fn try_pun_slice(&self) -> Option<&[u64]> {
             let ptr = self.as_ptr();
             let len = self.len();
@@ -873,6 +894,7 @@ pub mod internal {
             }
         }
 
+        #[inline]
         fn try_pun_slice_mut(&mut self) -> Option<&mut [u64]> {
             let ptr = self.as_mut_ptr();
             let len = self.len();
