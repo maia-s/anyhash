@@ -707,7 +707,7 @@ impl<T, U: BuildHasher<T> + Default> Default for BuildHasherBe<T, U> {
 
 #[doc(hidden)]
 pub mod internal {
-    use core::{marker::PhantomData, slice};
+    use core::{marker::PhantomData, mem::transmute, slice};
 
     use super::*;
 
@@ -816,6 +816,92 @@ pub mod internal {
                 // The result has the same size as the input and a smaller alignment requirement.
                 slice::from_raw_parts(ptr as *const _, len * 8)
             }
+        }
+    }
+
+    pub(crate) trait ConstValue: Copy {
+        const VALUE: usize;
+        type ArrayU64: Default;
+        type Array2xU32;
+        type Array4xU16;
+        type Array8xU8;
+    }
+
+    macro_rules! define_const_values {
+        ($($name:ident = $value:expr),* $(,)?) => { $(
+            #[derive(Clone, Copy)]
+            pub(crate) struct $name;
+
+            impl ConstValue for $name {
+                const VALUE: usize = $value;
+                type ArrayU64 = [u64; $value];
+                type Array2xU32 = [u32; 2 * $value];
+                type Array4xU16 = [u16; 4 * $value];
+                type Array8xU8 = [u8; 8 * $value];
+            }
+
+            impl From<$name> for usize {
+                #[inline]
+                fn from(_: $name) -> Self {
+                    $name::VALUE
+                }
+            }
+        )* };
+    }
+
+    define_const_values! {
+        N4 = 4,
+    }
+
+    #[derive(Clone, Copy)]
+    #[repr(transparent)]
+    pub(crate) struct Buffer<N: ConstValue>(N::ArrayU64);
+
+    #[allow(dead_code)]
+    impl<N: ConstValue> Buffer<N> {
+        #[inline]
+        pub fn new() -> Self {
+            Self(N::ArrayU64::default())
+        }
+
+        #[inline]
+        pub fn as_bytes(&self) -> &N::Array8xU8 {
+            unsafe { transmute::<&N::ArrayU64, &N::Array8xU8>(&self.0) }
+        }
+
+        #[inline]
+        pub fn as_bytes_mut(&mut self) -> &mut N::Array8xU8 {
+            unsafe { transmute::<&mut N::ArrayU64, &mut N::Array8xU8>(&mut self.0) }
+        }
+
+        #[inline]
+        pub fn as_u16s(&self) -> &N::Array4xU16 {
+            unsafe { transmute::<&N::ArrayU64, &N::Array4xU16>(&self.0) }
+        }
+
+        #[inline]
+        pub fn as_u16s_mut(&mut self) -> &mut N::Array4xU16 {
+            unsafe { transmute::<&mut N::ArrayU64, &mut N::Array4xU16>(&mut self.0) }
+        }
+
+        #[inline]
+        pub fn as_u32s(&self) -> &N::Array2xU32 {
+            unsafe { transmute::<&N::ArrayU64, &N::Array2xU32>(&self.0) }
+        }
+
+        #[inline]
+        pub fn as_u32s_mut(&mut self) -> &mut N::Array2xU32 {
+            unsafe { transmute::<&mut N::ArrayU64, &mut N::Array2xU32>(&mut self.0) }
+        }
+
+        #[inline]
+        pub fn as_u64s(&self) -> &N::ArrayU64 {
+            &self.0
+        }
+
+        #[inline]
+        pub fn as_u64s_mut(&mut self) -> &mut N::ArrayU64 {
+            &mut self.0
         }
     }
 }

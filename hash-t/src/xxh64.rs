@@ -2,9 +2,11 @@
 
 // based on the spec at https://github.com/Cyan4973/xxHash/blob/dev/doc/xxhash_spec.md
 
-use core::mem::transmute;
-
-use crate::{impl_core_build_hasher, impl_core_hasher, BuildHasher, Hasher};
+use crate::{
+    impl_core_build_hasher, impl_core_hasher,
+    internal::{Buffer, N4},
+    BuildHasher, Hasher,
+};
 
 impl_core_build_hasher!(Xxh64BuildHasher; Xxh64DefaultBuildHasher);
 impl_core_hasher!(Xxh64);
@@ -69,33 +71,11 @@ pub type XXh64HashSet<T> = std::collections::HashSet<T, Xxh64BuildHasher>;
 /// `HashSet` from `std` configured to use the [`Xxh64`] hasher with the default seed.
 pub type XXh64DefaultHashSet<T> = std::collections::HashSet<T, Xxh64DefaultBuildHasher>;
 
-#[repr(C, align(8))]
-#[derive(Clone, Copy)]
-struct Buffer([u8; 32]);
-
-impl Buffer {
-    const fn new() -> Self {
-        Self([0; 32])
-    }
-
-    #[allow(clippy::let_and_return)]
-    fn u64_array(&self) -> [u64; 4] {
-        let u64_array = unsafe {
-            // # Safety
-            // Buffer has the same size and alignment as [u64; 4]
-            transmute::<Self, [u64; 4]>(*self)
-        };
-        #[cfg(not(target_endian = "little"))]
-        let u64_array = u64_array.map(|n| n.to_le());
-        u64_array
-    }
-}
-
 /// Hasher using the Xxh64 algorithm.
 #[derive(Clone)]
 pub struct Xxh64 {
     acc: [u64; 4],
-    buffer: Buffer,
+    buffer: Buffer<N4>,
     buffer_len: usize,
     total_len: u64,
 }
@@ -108,12 +88,12 @@ impl Xxh64 {
     const PRIME64_5: u64 = 0x27d4eb2f165667c5;
 
     /// Create a new `Xxh64` hasher using the default seed.
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self::with_seed(0)
     }
 
     /// Create a new `Xxh64` hasher with a custom `seed`.
-    pub const fn with_seed(seed: u64) -> Self {
+    pub fn with_seed(seed: u64) -> Self {
         Self {
             acc: [
                 seed.wrapping_add(Self::PRIME64_1)
@@ -132,7 +112,7 @@ impl Xxh64 {
         let n = bytes.len().min(32 - self.buffer_len);
         let take;
         (take, *bytes) = bytes.split_at(n);
-        self.buffer.0[self.buffer_len..self.buffer_len + n].copy_from_slice(take);
+        self.buffer.as_bytes_mut()[self.buffer_len..self.buffer_len + n].copy_from_slice(take);
         self.buffer_len += n;
         self.buffer_len == 32
     }
@@ -164,7 +144,7 @@ impl Hasher<u64> for Xxh64 {
         while !bytes.is_empty() {
             if self.fill_buffer(&mut bytes) {
                 self.buffer_len = 0;
-                for (acc, lane) in self.acc.iter_mut().zip(self.buffer.u64_array().into_iter()) {
+                for (acc, &lane) in self.acc.iter_mut().zip(self.buffer.as_u64s().iter()) {
                     *acc = Self::round(*acc, lane);
                 }
             }
@@ -190,7 +170,7 @@ impl Hasher<u64> for Xxh64 {
         let mut acc = acc.wrapping_add(self.total_len);
 
         let u64s = self.buffer_len / 8;
-        for lane in self.buffer.u64_array().into_iter().take(u64s) {
+        for &lane in self.buffer.as_u64s().iter().take(u64s) {
             acc = (acc ^ Self::round(0, lane))
                 .rotate_left(27)
                 .wrapping_mul(Self::PRIME64_1)
@@ -199,7 +179,8 @@ impl Hasher<u64> for Xxh64 {
 
         let mut bi = u64s * 8;
         if self.buffer_len - bi >= 4 {
-            let lane = u32::from_le_bytes(self.buffer.0[bi..bi + 4].try_into().unwrap()) as u64;
+            let lane =
+                u32::from_le_bytes(self.buffer.as_bytes()[bi..bi + 4].try_into().unwrap()) as u64;
             bi += 4;
             acc = (acc ^ lane.wrapping_mul(Self::PRIME64_1))
                 .rotate_left(23)
@@ -207,7 +188,7 @@ impl Hasher<u64> for Xxh64 {
                 .wrapping_add(Self::PRIME64_3);
         }
 
-        for &byte in &self.buffer.0[bi..self.buffer_len] {
+        for &byte in &self.buffer.as_bytes()[bi..self.buffer_len] {
             let lane = byte as u64;
             acc = (acc ^ lane.wrapping_mul(Self::PRIME64_5))
                 .rotate_left(11)
