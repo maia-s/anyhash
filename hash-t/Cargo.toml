@@ -3,6 +3,7 @@ name = "hash-t"
 version = "0.1.0"
 edition = "2021"
 authors = ["Maia <66437537+maia-s@users.noreply.github.com>"]
+license = "MIT OR Apache-2.0 OR Zlib"
 
 [features]
 std = ["alloc"]
