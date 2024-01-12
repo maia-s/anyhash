@@ -5,7 +5,7 @@
 use crate::{
     impl_core_build_hasher, impl_core_hasher,
     internal::{Buffer, N4},
-    BuildHasher, EndianNeutralAlgorithm, Hasher,
+    BuildHasher, EndianIndependentAlgorithm, Hasher,
 };
 
 impl_core_build_hasher!(Xxh64BuildHasher; Xxh64DefaultBuildHasher);
@@ -132,7 +132,7 @@ impl Xxh64 {
     }
 }
 
-impl EndianNeutralAlgorithm for Xxh64 {}
+impl EndianIndependentAlgorithm for Xxh64 {}
 
 impl Default for Xxh64 {
     fn default() -> Self {

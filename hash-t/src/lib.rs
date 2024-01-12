@@ -449,7 +449,7 @@ pub trait BuildHasher<T> {
 
 /// Marker trait for hashers whose hashing algorithm calculates the same hash
 /// on hosts of different endiannesses, given the same byte stream.
-pub trait EndianNeutralAlgorithm {}
+pub trait EndianIndependentAlgorithm {}
 
 /// Marker trait for hashers whose write methods write data in the same order
 /// regardless of the endianness of the host. Be aware that a type may write
@@ -457,30 +457,33 @@ pub trait EndianNeutralAlgorithm {}
 ///
 /// The [`HasherLe`] and [`HasherBe`] types can be used to create hashers that
 /// implement this trait.
-pub trait EndianNeutralWrites {}
+pub trait EndianIndependentWrites {}
 
-/// Automatically implemented for [`Hasher`]s that implement both [`EndianNeutralAlgorithm`]
-/// and [`EndianNeutralWrites`].
-pub trait EndianNeutralHasher<T>: Hasher<T> + EndianNeutralAlgorithm + EndianNeutralWrites {}
+/// Automatically implemented for [`Hasher`]s that implement both [`EndianIndependentAlgorithm`]
+/// and [`EndianIndependentWrites`].
+pub trait EndianIndependentHasher<T>:
+    Hasher<T> + EndianIndependentAlgorithm + EndianIndependentWrites
+{
+}
 
-impl<T, H> EndianNeutralHasher<T> for H where
-    H: ?Sized + Hasher<T> + EndianNeutralAlgorithm + EndianNeutralWrites
+impl<T, H> EndianIndependentHasher<T> for H where
+    H: ?Sized + Hasher<T> + EndianIndependentAlgorithm + EndianIndependentWrites
 {
 }
 
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to little endian.
 ///
-/// This can aid in creating an endian neutral hash, but be aware that types may write endian
+/// This can aid in creating an endian independent hash, but be aware that types may write endian
 /// dependent data in ways that can't be detected by this wrapper. The wrapped hasher's
-/// algorithm must also support endian neutral hashing for this to work.
+/// algorithm must also support endian independent hashing for this to work.
 ///
-/// Endian neutral hashers defined in this crate implement the [`EndianNeutralAlgorithm`] trait.
+/// Endian independent hashers defined in this crate implement the [`EndianIndependentAlgorithm`] trait.
 pub struct HasherLe<T, H: Hasher<T>>(H, PhantomData<fn() -> T>);
 
 impl_core_hasher!(impl<T, H: Hasher<T>> HasherLe<T, H>);
 
-impl<T, H: Hasher<T> + EndianNeutralAlgorithm> EndianNeutralAlgorithm for HasherLe<T, H> {}
-impl<T, H: Hasher<T>> EndianNeutralWrites for HasherLe<T, H> {}
+impl<T, H: Hasher<T> + EndianIndependentAlgorithm> EndianIndependentAlgorithm for HasherLe<T, H> {}
+impl<T, H: Hasher<T>> EndianIndependentWrites for HasherLe<T, H> {}
 
 impl<T, H: Hasher<T>> HasherLe<T, H> {
     /// Create a new `HasherLe`.
@@ -527,17 +530,17 @@ impl<T, H: Hasher<T> + Default> Default for HasherLe<T, H> {
 
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to big endian.
 ///
-/// This can aid in creating an endian neutral hash, but be aware that types may write endian
+/// This can aid in creating an endian independent hash, but be aware that types may write endian
 /// dependent data in ways that can't be detected by this wrapper. The wrapped hasher's
-/// algorithm must also support endian neutral hashing for this to work.
+/// algorithm must also support endian independent hashing for this to work.
 ///
-/// Endian neutral hashers defined in this crate implement the [`EndianNeutralAlgorithm`] trait.
+/// Endian independent hashers defined in this crate implement the [`EndianIndependentAlgorithm`] trait.
 pub struct HasherBe<T, H: Hasher<T>>(H, PhantomData<fn() -> T>);
 
 impl_core_hasher!(impl<T, H: Hasher<T>> HasherBe<T, H>);
 
-impl<T, H: Hasher<T> + EndianNeutralAlgorithm> EndianNeutralAlgorithm for HasherBe<T, H> {}
-impl<T, H: Hasher<T>> EndianNeutralWrites for HasherBe<T, H> {}
+impl<T, H: Hasher<T> + EndianIndependentAlgorithm> EndianIndependentAlgorithm for HasherBe<T, H> {}
+impl<T, H: Hasher<T>> EndianIndependentWrites for HasherBe<T, H> {}
 
 impl<T, H: Hasher<T>> HasherBe<T, H> {
     /// Create a new `HasherBe`.

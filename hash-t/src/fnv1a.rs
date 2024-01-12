@@ -3,7 +3,7 @@
 use core::ops::BitXorAssign;
 
 use crate::{
-    impl_core_build_hasher, impl_core_hasher, BuildHasher, EndianNeutralAlgorithm, Hasher,
+    impl_core_build_hasher, impl_core_hasher, BuildHasher, EndianIndependentAlgorithm, Hasher,
 };
 
 #[cfg(feature = "bnum")]
@@ -243,7 +243,7 @@ impl<T: FnvConfig> Fnv1a<T> {
     }
 }
 
-impl<T: FnvConfig> EndianNeutralAlgorithm for Fnv1a<T> {}
+impl<T: FnvConfig> EndianIndependentAlgorithm for Fnv1a<T> {}
 
 impl<T: FnvConfig> Default for Fnv1a<T> {
     #[inline]
