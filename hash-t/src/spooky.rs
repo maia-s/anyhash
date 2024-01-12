@@ -476,6 +476,7 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
         let length_to_end_64 = (length / SC_BLOCK_SIZE) * SC_NUM_VARS;
         let end = unsafe { u.p64.add(length_to_end_64) };
         let remainder = (length - length_to_end_64 * 8) as u8;
+
         if bytes.as_ptr().align_offset(8) == 0 {
             let u64s = unsafe {
                 // # Safety
@@ -486,17 +487,13 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
                 Self::mix(chunk.try_into().unwrap(), &mut h);
             }
         } else {
-            assert!(false);
-            //self.data.as_bytes_mut()[..SC_NUM_VARS].copy_from_slice(&bytes[..SC_BLOCK_SIZE]);
-
-            while unsafe { u.p64 } < end {
-                unsafe {
-                    u.p8.copy_to_nonoverlapping(
-                        self.data.as_bytes_mut().as_mut_ptr(),
-                        SC_BLOCK_SIZE,
-                    );
-                }
-                u.p64 = unsafe { u.p64.add(SC_NUM_VARS) };
+            while bytes.len() >= SC_BLOCK_SIZE {
+                self.data.as_bytes_mut()[..SC_BLOCK_SIZE].copy_from_slice(&bytes[..SC_BLOCK_SIZE]);
+                Self::mix(
+                    self.data.as_u64s()[..SC_NUM_VARS].try_into().unwrap(),
+                    &mut h,
+                );
+                bytes = &bytes[SC_BLOCK_SIZE..];
             }
         }
 
