@@ -325,12 +325,13 @@ macro_rules! test_bytes_hash {
     ($([$hashfn:ident] $($bs:ident: $hash:expr),* $(,)?)*) => { $(
         mod $hashfn {
             use super::*;
-            $(
-                #[test]
-                fn $bs() {
+
+            #[test]
+            fn test() {
+                $(
                     assert_eq!($hashfn($crate::tests::RawBytes(stringify!($bs).as_bytes())), $hash);
-                }
-            )*
+                )*
+            }
         }
     )* };
 }
