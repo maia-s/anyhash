@@ -2,7 +2,7 @@
 
 use core::ops::BitXorAssign;
 
-use crate::{impl_core_build_hasher, impl_core_hasher, BuildHasher, Hasher};
+use crate::{impl_core_build_hasher, impl_core_hasher, BuildHasher, EndianNeutralHasher, Hasher};
 
 #[cfg(feature = "bnum")]
 use bnum::types::{U1024, U256, U512};
@@ -229,6 +229,8 @@ impl<T: FnvConfig> Fnv1a<T> {
         Self(seed)
     }
 }
+
+impl<T: FnvConfig> EndianNeutralHasher for Fnv1a<T> {}
 
 impl<T: FnvConfig> Default for Fnv1a<T> {
     fn default() -> Self {

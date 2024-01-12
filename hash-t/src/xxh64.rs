@@ -5,7 +5,7 @@
 use crate::{
     impl_core_build_hasher, impl_core_hasher,
     internal::{Buffer, N4},
-    BuildHasher, Hasher,
+    BuildHasher, EndianNeutralHasher, Hasher,
 };
 
 impl_core_build_hasher!(Xxh64BuildHasher; Xxh64DefaultBuildHasher);
@@ -132,6 +132,8 @@ impl Xxh64 {
     }
 }
 
+impl EndianNeutralHasher for Xxh64 {}
+
 impl Default for Xxh64 {
     fn default() -> Self {
         Self::new()
@@ -145,7 +147,7 @@ impl Hasher<u64> for Xxh64 {
             if self.fill_buffer(&mut bytes) {
                 self.buffer_len = 0;
                 for (acc, &lane) in self.acc.iter_mut().zip(self.buffer.as_u64s().iter()) {
-                    *acc = Self::round(*acc, lane);
+                    *acc = Self::round(*acc, lane.to_le());
                 }
             }
         }
@@ -171,7 +173,7 @@ impl Hasher<u64> for Xxh64 {
 
         let u64s = self.buffer_len / 8;
         for &lane in self.buffer.as_u64s().iter().take(u64s) {
-            acc = (acc ^ Self::round(0, lane))
+            acc = (acc ^ Self::round(0, lane.to_le()))
                 .rotate_left(27)
                 .wrapping_mul(Self::PRIME64_1)
                 .wrapping_add(Self::PRIME64_4);

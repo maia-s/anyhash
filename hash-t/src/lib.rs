@@ -462,8 +462,26 @@ pub trait BuildHasher<T> {
     }
 }
 
+/// Marker trait for hashers whose hash is independent of the endianness of the host,
+/// given the same byte stream.
+///
+/// Endian neutral hashers have the capacity to create hashes that don't depend on the
+/// endianness of the host, but the types hashed must also do endian neutral hashing
+/// for this to be possible. It's not enough for the hasher to to be endian neutral;
+/// the byte stream sent to the hasher must be the same regardless of endianness.
+/// The `HasherLe` and `HasherBe` wrapper types can assist with this.
+pub trait EndianNeutralHasher {}
+
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to little endian.
+///
+/// This can aid in creating an endian neutral hash, but be aware that types may write endian
+/// dependent data in ways that can't be detected by this wrapper. The wrapped hasher itself
+/// must also support endian neutral hashing for this to work.
+///
+/// Endian neutral hashers defined in this crate implement the [`EndianNeutralHasher`] trait.
 pub struct HasherLe<T, U: Hasher<T>>(U, PhantomData<fn() -> T>);
+
+impl<T, U: Hasher<T> + EndianNeutralHasher> EndianNeutralHasher for HasherLe<T, U> {}
 
 impl_core_hasher!(impl<T, U: Hasher<T>> HasherLe<T, U>);
 
@@ -542,9 +560,17 @@ impl<T, U: Hasher<T> + Default> Default for HasherLe<T, U> {
 }
 
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to big endian.
+///
+/// This can aid in creating an endian neutral hash, but be aware that types may write endian
+/// dependent data in ways that can't be detected by this wrapper. The wrapped hasher itself
+/// must also support endian neutral hashing for this to work.
+///
+/// Endian neutral hashers defined in this crate implement the [`EndianNeutralHasher`] trait.
 pub struct HasherBe<T, U: Hasher<T>>(U, PhantomData<fn() -> T>);
 
 impl_core_hasher!(impl<T, U: Hasher<T>> HasherBe<T, U>);
+
+impl<T, U: Hasher<T> + EndianNeutralHasher> EndianNeutralHasher for HasherBe<T, U> {}
 
 impl<T, U: Hasher<T>> HasherBe<T, U> {
     /// Create a new `HasherBe`.
