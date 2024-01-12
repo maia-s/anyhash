@@ -497,47 +497,33 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
             return self.short();
         }
 
-        let mut data = self.data.as_u64s().as_ptr();
         let mut remainder: u8 = self.remainder;
-
         let mut h = self.state;
 
-        if remainder >= SC_BLOCK_SIZE as u8 {
+        let offset = if remainder >= SC_BLOCK_SIZE as u8 {
             Self::mix(
-                unsafe { core::slice::from_raw_parts(data, SC_NUM_VARS) }
-                    .try_into()
-                    .unwrap(),
+                self.data.as_u64s()[..SC_NUM_VARS].try_into().unwrap(),
                 &mut h,
             );
-            data = unsafe { data.add(SC_NUM_VARS) };
             remainder -= SC_BLOCK_SIZE as u8;
-        }
-
-        unsafe {
-            (data as *mut u8)
-                .add(remainder as usize)
-                .write_bytes(0, SC_BLOCK_SIZE - remainder as usize)
+            SC_NUM_VARS
+        } else {
+            0
         };
 
-        unsafe {
-            (data as *mut u8).add(SC_BLOCK_SIZE - 1).write(remainder);
-        }
+        let mut data: [u64; SC_NUM_VARS] = self.data.as_u64s()[offset..][..SC_NUM_VARS]
+            .try_into()
+            .unwrap();
+        let data_u8 = PunSlice::<u8>::pun_slice_mut(&mut data[..]);
+
+        data_u8[remainder as usize..].fill(0);
+        data_u8[SC_BLOCK_SIZE - 1] = remainder;
 
         if V::VERSION == 1 {
-            Self::mix(
-                unsafe { core::slice::from_raw_parts(data, SC_NUM_VARS) }
-                    .try_into()
-                    .unwrap(),
-                &mut h,
-            );
+            Self::mix(&data, &mut h);
         }
 
-        Self::end(
-            unsafe { core::slice::from_raw_parts(data, SC_NUM_VARS) }
-                .try_into()
-                .unwrap(),
-            &mut h,
-        );
+        Self::end(&data, &mut h);
 
         h[0] as u128 | ((h[1] as u128) << 64)
     }
