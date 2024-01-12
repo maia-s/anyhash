@@ -27,7 +27,7 @@ use core::marker::PhantomData;
 
 use crate::{
     impl_core_build_hasher, impl_core_hasher,
-    internal::{Buffer, PunSlice, N24},
+    internal::{Buffer, PunSlice, TryPunSlice, N24},
 };
 
 use crate::{BuildHasher, Hasher};
@@ -466,11 +466,7 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
         let remainder = (length - length_to_end_64 * 8) as u8;
 
         if bytes.as_ptr().align_offset(8) == 0 {
-            let u64s = unsafe {
-                // # Safety
-                // bytes is aligned
-                core::slice::from_raw_parts(bytes.as_ptr() as *const u64, length_to_end_64)
-            };
+            let u64s = bytes.try_pun_slice().unwrap();
             for chunk in u64s.chunks_exact(SC_NUM_VARS) {
                 Self::mix(chunk.try_into().unwrap(), &mut h);
             }

@@ -707,7 +707,11 @@ impl<T, U: BuildHasher<T> + Default> Default for BuildHasherBe<T, U> {
 
 #[doc(hidden)]
 pub mod internal {
-    use core::{marker::PhantomData, mem::transmute, slice};
+    use core::{
+        marker::PhantomData,
+        mem::{align_of, transmute},
+        slice,
+    };
 
     use super::*;
 
@@ -769,27 +773,22 @@ pub mod internal {
     }
 
     pub(crate) trait PunSlice<T> {
-        type Output: ?Sized;
-        fn pun_slice(&self) -> &Self::Output;
-        fn pun_slice_mut(&mut self) -> &mut Self::Output;
+        fn pun_slice(&self) -> &[T];
+        fn pun_slice_mut(&mut self) -> &mut [T];
     }
 
     impl PunSlice<u64> for [u64] {
-        type Output = [u64];
-
-        fn pun_slice(&self) -> &Self::Output {
+        fn pun_slice(&self) -> &[u64] {
             self
         }
 
-        fn pun_slice_mut(&mut self) -> &mut Self::Output {
+        fn pun_slice_mut(&mut self) -> &mut [u64] {
             self
         }
     }
 
     impl PunSlice<u32> for [u64] {
-        type Output = [u32];
-
-        fn pun_slice(&self) -> &Self::Output {
+        fn pun_slice(&self) -> &[u32] {
             let ptr = self.as_ptr();
             let len = self.len();
             unsafe {
@@ -799,7 +798,7 @@ pub mod internal {
             }
         }
 
-        fn pun_slice_mut(&mut self) -> &mut Self::Output {
+        fn pun_slice_mut(&mut self) -> &mut [u32] {
             let ptr = self.as_mut_ptr();
             let len = self.len();
             unsafe {
@@ -811,9 +810,7 @@ pub mod internal {
     }
 
     impl PunSlice<u16> for [u64] {
-        type Output = [u16];
-
-        fn pun_slice(&self) -> &Self::Output {
+        fn pun_slice(&self) -> &[u16] {
             let ptr = self.as_ptr();
             let len = self.len();
             unsafe {
@@ -823,7 +820,7 @@ pub mod internal {
             }
         }
 
-        fn pun_slice_mut(&mut self) -> &mut Self::Output {
+        fn pun_slice_mut(&mut self) -> &mut [u16] {
             let ptr = self.as_mut_ptr();
             let len = self.len();
             unsafe {
@@ -835,9 +832,7 @@ pub mod internal {
     }
 
     impl PunSlice<u8> for [u64] {
-        type Output = [u8];
-
-        fn pun_slice(&self) -> &Self::Output {
+        fn pun_slice(&self) -> &[u8] {
             let ptr = self.as_ptr();
             let len = self.len();
             unsafe {
@@ -847,13 +842,48 @@ pub mod internal {
             }
         }
 
-        fn pun_slice_mut(&mut self) -> &mut Self::Output {
+        fn pun_slice_mut(&mut self) -> &mut [u8] {
             let ptr = self.as_mut_ptr();
             let len = self.len();
             unsafe {
                 // # Safety
                 // The result has the same size as the input and a smaller alignment requirement.
                 slice::from_raw_parts_mut(ptr as *mut _, len * 8)
+            }
+        }
+    }
+
+    pub(crate) trait TryPunSlice<T> {
+        fn try_pun_slice(&self) -> Option<&[T]>;
+        fn try_pun_slice_mut(&mut self) -> Option<&mut [T]>;
+    }
+
+    impl TryPunSlice<u64> for [u8] {
+        fn try_pun_slice(&self) -> Option<&[u64]> {
+            let ptr = self.as_ptr();
+            let len = self.len();
+            if ptr.align_offset(align_of::<u64>()) == 0 && len % 8 == 0 {
+                Some(unsafe {
+                    // # Safety
+                    // Size and alignment has been checked.
+                    slice::from_raw_parts(ptr as *const _, len / 8)
+                })
+            } else {
+                None
+            }
+        }
+
+        fn try_pun_slice_mut(&mut self) -> Option<&mut [u64]> {
+            let ptr = self.as_mut_ptr();
+            let len = self.len();
+            if ptr.align_offset(align_of::<u64>()) == 0 && len % 8 == 0 {
+                Some(unsafe {
+                    // # Safety
+                    // Size and alignment has been checked.
+                    slice::from_raw_parts_mut(ptr as *mut _, len / 8)
+                })
+            } else {
+                None
             }
         }
     }
