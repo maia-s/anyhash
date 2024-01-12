@@ -283,7 +283,7 @@ mod core_impls {
 
     impl_hash_t!(impl<U> Discriminant<U>);
 
-    impl<T, U: Hash<T>> Hash<T> for ManuallyDrop<U> {
+    impl<T, U: ?Sized + Hash<T>> Hash<T> for ManuallyDrop<U> {
         #[inline]
         fn hash<H: Hasher<T>>(&self, state: &mut H) {
             Hash::<T>::hash(
