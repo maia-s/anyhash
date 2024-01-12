@@ -241,7 +241,7 @@ impl<V: Version> SpookyV<V> {
         if length > 15 {
             i = length / 32 * 4;
 
-            for chunk in self.data.as_u64s()[..i].chunks(4) {
+            for chunk in self.data.as_u64s()[..i].chunks_exact(4) {
                 h[2] = h[2].wrapping_add(chunk[0]);
                 h[3] = h[3].wrapping_add(chunk[1]);
                 Self::short_mix(&mut h);
@@ -471,19 +471,16 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
                 // bytes is aligned
                 core::slice::from_raw_parts(bytes.as_ptr() as *const u64, length_to_end_64)
             };
-            for chunk in u64s.chunks(SC_NUM_VARS) {
+            for chunk in u64s.chunks_exact(SC_NUM_VARS) {
                 Self::mix(chunk.try_into().unwrap(), &mut h);
             }
         } else {
-            let mut offset = 0;
-            while bytes[offset..].len() >= SC_BLOCK_SIZE {
-                self.data.as_bytes_mut()[..SC_BLOCK_SIZE]
-                    .copy_from_slice(&bytes[offset..][..SC_BLOCK_SIZE]);
+            for chunk in bytes.chunks_exact(SC_BLOCK_SIZE) {
+                self.data.as_bytes_mut()[..SC_BLOCK_SIZE].copy_from_slice(chunk);
                 Self::mix(
                     self.data.as_u64s()[..SC_NUM_VARS].try_into().unwrap(),
                     &mut h,
                 );
-                offset += SC_BLOCK_SIZE;
             }
         }
 
