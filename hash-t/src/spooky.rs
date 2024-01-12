@@ -23,9 +23,9 @@ macro_rules! fallthrough_jump_table {
     };
 }
 
-use core::{marker::PhantomData, slice};
+use core::marker::PhantomData;
 
-use crate::{impl_core_build_hasher, impl_core_hasher};
+use crate::{impl_core_build_hasher, impl_core_hasher, internal::PunSlice};
 
 use crate::{BuildHasher, Hasher};
 
@@ -262,16 +262,8 @@ impl<V: Version> SpookyV<V> {
         }
 
         let data = &self.data[i..i + (remainder + 7) / 8];
-        let data_ptr = data.as_ptr();
-        let data_len = data.len();
-        let (data_u8, data_u32) = unsafe {
-            // # Safety
-            // Both slices are the same size as the original and have lesser alignment.
-            (
-                slice::from_raw_parts(data_ptr as *const u8, data_len * 8),
-                slice::from_raw_parts(data_ptr as *const u32, data_len * 2),
-            )
-        };
+        let data_u8 = PunSlice::<u8>::pun_slice(data);
+        let data_u32 = PunSlice::<u32>::pun_slice(data);
 
         fallthrough_jump_table! {
             switch (remainder) {
