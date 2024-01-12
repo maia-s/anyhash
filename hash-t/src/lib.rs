@@ -850,12 +850,12 @@ pub mod internal {
 
         #[inline]
         pub fn as_u64s(&self) -> &N::ArrayU64 {
-            cast_ref(&self.0)
+            &self.0
         }
 
         #[inline]
         pub fn as_u64s_mut(&mut self) -> &mut N::ArrayU64 {
-            cast_mut(&mut self.0)
+            &mut self.0
         }
     }
 }
