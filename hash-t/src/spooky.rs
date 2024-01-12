@@ -4,8 +4,8 @@
 
 macro_rules! fallthrough_jump_table {
     (switch ($expr:expr) {
-        $( $label:lifetime: $pat:pat => $body:expr, )*
-        @ $exitlabel:lifetime:
+        $( $label:lifetime: $pat:pat => $body:expr )*
+        => $exitlabel:lifetime:
     }) => {
         fallthrough_jump_table!(@ {
             match $expr {
@@ -23,7 +23,7 @@ macro_rules! fallthrough_jump_table {
     };
 }
 
-use core::marker::PhantomData;
+use core::{marker::PhantomData, slice};
 
 use crate::{impl_core_build_hasher, impl_core_hasher};
 
@@ -230,20 +230,13 @@ impl<V: Version> SpookyV<V> {
     fn short(&self) -> u128 {
         let length = self.length;
 
-        union U {
-            p8: *const u8,
-            p32: *const u32,
-            p64: *const u64,
-        }
-        let mut u = U {
-            p64: self.data.as_ptr(),
-        };
-
         let mut remainder: usize = length % 32;
         let mut h = [self.state[0], self.state[1], SC_CONST, SC_CONST];
 
+        let mut i = 0;
+
         if length > 15 {
-            let mut i = length / 32 * 4;
+            i = length / 32 * 4;
 
             for chunk in self.data[..i].chunks(4) {
                 h[2] = h[2].wrapping_add(chunk[0]);
@@ -253,16 +246,12 @@ impl<V: Version> SpookyV<V> {
                 h[1] = h[1].wrapping_add(chunk[3]);
             }
 
-            u.p64 = unsafe { u.p64.add(i) };
-
             if remainder >= 16 {
                 remainder -= 16;
                 h[2] = h[2].wrapping_add(self.data[i]);
                 h[3] = h[3].wrapping_add(self.data[i + 1]);
                 Self::short_mix(&mut h);
                 i += 2;
-
-                u.p64 = unsafe { u.p64.add(2) };
             }
         }
 
@@ -272,73 +261,55 @@ impl<V: Version> SpookyV<V> {
             h[3] = h[3].wrapping_add((length as u64).rotate_left(56));
         }
 
+        let data = &self.data[i..i + (remainder + 7) / 8];
+        let data_ptr = data.as_ptr();
+        let data_len = data.len();
+        let (data_u8, data_u32) = unsafe {
+            // # Safety
+            // Both slices are the same size as the original and have lesser alignment.
+            (
+                slice::from_raw_parts(data_ptr as *const u8, data_len * 8),
+                slice::from_raw_parts(data_ptr as *const u32, data_len * 2),
+            )
+        };
+
         fallthrough_jump_table! {
             switch (remainder) {
-                'r15: 15 => {
-                    h[3] =
-                        h[3].wrapping_add(unsafe { (u.p8.add(14)).read() as u64 }.rotate_left(48));
-                },
-                'r14: 14 => {
-                    h[3] =
-                        h[3].wrapping_add(unsafe { (u.p8.add(13)).read() as u64 }.rotate_left(40));
-                },
-                'r13: 13 => {
-                    h[3] =
-                        h[3].wrapping_add(unsafe { (u.p8.add(12)).read() as u64 }.rotate_left(32));
-                },
+                'r15: 15 => h[3] = h[3].wrapping_add((data_u8[14] as u64).rotate_left(48))
+                'r14: 14 => h[3] = h[3].wrapping_add((data_u8[13] as u64).rotate_left(40))
+                'r13: 13 => h[3] = h[3].wrapping_add((data_u8[12] as u64).rotate_left(32))
                 'r12: 12 => {
-                    h[3] = h[3].wrapping_add(unsafe { u.p32.add(2).read() } as u64);
-                    h[2] = h[2].wrapping_add(unsafe { u.p64.read() });
+                    h[3] = h[3].wrapping_add(data_u32[2] as u64);
+                    h[2] = h[2].wrapping_add(data[0]);
                     break 'done;
-                },
-                'r11: 11 => {
-                    h[3] =
-                        h[3].wrapping_add(unsafe { (u.p8.add(10)).read() as u64 }.rotate_left(16));
-                },
-                'r10: 10 => {
-                    h[3] = h[3].wrapping_add(unsafe { (u.p8.add(9)).read() as u64 }.rotate_left(8));
-                },
-                'r9: 9 => {
-                    h[3] = h[3].wrapping_add(unsafe { (u.p8.add(8)).read() as u64 });
-                },
+                }
+                'r11: 11 => h[3] = h[3].wrapping_add((data_u8[10] as u64).rotate_left(16))
+                'r10: 10 => h[3] = h[3].wrapping_add((data_u8[9] as u64).rotate_left(8))
+                'r9: 9 => h[3] = h[3].wrapping_add(data_u8[8] as u64)
                 'r8: 8 => {
-                    h[2] = h[2].wrapping_add(unsafe { u.p64.read() });
+                    h[2] = h[2].wrapping_add(data[0]);
                     break 'done;
-                },
-                'r7: 7 => {
-                    h[2] =
-                        h[2].wrapping_add(unsafe { (u.p8.add(6)).read() as u64 }.rotate_left(48));
-                },
-                'r6: 6 => {
-                    h[2] =
-                        h[2].wrapping_add(unsafe { (u.p8.add(5)).read() as u64 }.rotate_left(40));
-                },
-                'r5: 5 => {
-                    h[2] =
-                        h[2].wrapping_add(unsafe { (u.p8.add(4)).read() as u64 }.rotate_left(32));
-                },
+                }
+                'r7: 7 => h[2] = h[2].wrapping_add((data_u8[6] as u64).rotate_left(48))
+                'r6: 6 => h[2] = h[2].wrapping_add((data_u8[5] as u64).rotate_left(40))
+                'r5: 5 => h[2] = h[2].wrapping_add((data_u8[4] as u64).rotate_left(32))
                 'r4: 4 => {
-                    h[2] = h[2].wrapping_add(unsafe { u.p32.read() } as u64);
+                    h[2] = h[2].wrapping_add(data_u32[0] as u64);
                     break 'done;
-                },
-                'r3: 3 => {
-                    h[2] =
-                        h[2].wrapping_add(unsafe { (u.p8.add(2)).read() as u64 }.rotate_left(16));
-                },
-                'r2: 2 => {
-                    h[2] = h[2].wrapping_add(unsafe { (u.p8.add(1)).read() as u64 }.rotate_left(8));
-                },
+                }
+                'r3: 3 => h[2] = h[2].wrapping_add((data_u8[2] as u64).rotate_left(16))
+                'r2: 2 => h[2] = h[2].wrapping_add((data_u8[1] as u64).rotate_left(8))
                 'r1: 1 => {
-                    h[2] = h[2].wrapping_add(unsafe { u.p8.read() as u64 });
+                    h[2] = h[2].wrapping_add(data_u8[0] as u64);
                     break 'done;
-                },
+                }
                 'r0: 0 => {
                     h[2] = h[2].wrapping_add(SC_CONST);
                     h[3] = h[3].wrapping_add(SC_CONST);
                     break 'done;
-                },
-                'error: _ => unreachable!(),
-                @ 'done:
+                }
+                'error: _ => unreachable!()
+                => 'done:
             }
         }
 
