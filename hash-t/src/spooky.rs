@@ -646,12 +646,15 @@ mod tests {
             0x939bd79c,
         ];
 
-        let mut buf = [0_u8; EXPECTED.len()];
+        let mut buf = [0_u8; EXPECTED.len() + 8];
 
-        for i in 0..EXPECTED.len() {
-            buf[i] = (i + 128) as u8;
-            let saw: u32 = SpookyDefaultBuildHasherV::<V1>::default().hash_one(RawBytes(&buf[..i]));
-            assert_eq!(saw, EXPECTED[i], "wrong value at {i}");
+        for align in 0..8 {
+            for i in 0..EXPECTED.len() {
+                buf[i + align] = (i + 128) as u8;
+                let saw: u32 = SpookyDefaultBuildHasherV::<V1>::default()
+                    .hash_one(RawBytes(&buf[align..][..i]));
+                assert_eq!(saw, EXPECTED[i], "wrong value at {i}");
+            }
         }
     }
 
@@ -734,12 +737,15 @@ mod tests {
             0xcc1c8250,
         ];
 
-        let mut buf = [0_u8; EXPECTED.len()];
+        let mut buf = [0_u8; EXPECTED.len() + 8];
 
-        for i in 0..EXPECTED.len() {
-            buf[i] = (i + 128) as u8;
-            let saw: u32 = SpookyDefaultBuildHasher::default().hash_one(RawBytes(&buf[..i]));
-            assert_eq!(saw, EXPECTED[i], "wrong value at {i}");
+        for align in 0..8 {
+            for i in 0..EXPECTED.len() {
+                buf[i + align] = (i + 128) as u8;
+                let saw: u32 =
+                    SpookyDefaultBuildHasher::default().hash_one(RawBytes(&buf[align..][..i]));
+                assert_eq!(saw, EXPECTED[i], "wrong value at {i}");
+            }
         }
     }
 }
