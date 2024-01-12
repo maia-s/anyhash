@@ -18,17 +18,20 @@ pub struct Fnv1aBuildHasher<T>(T);
 
 impl<T: FnvConfig> Fnv1aBuildHasher<T> {
     /// Create a [`BuildHasher`] for [`Fnv1a`] using the default seed.
+    #[inline]
     pub const fn new() -> Self {
         Self(Fnv1a::<T>::OFFSET_BASIS)
     }
 
     /// Create a [`BuildHasher`] for [`Fnv1a`] with a custom seed.
+    #[inline]
     pub const fn with_seed(seed: T) -> Self {
         Self(seed)
     }
 }
 
 impl<T: FnvConfig> Default for Fnv1aBuildHasher<T> {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
@@ -37,6 +40,7 @@ impl<T: FnvConfig> Default for Fnv1aBuildHasher<T> {
 impl<T: FnvConfig> BuildHasher<T> for Fnv1aBuildHasher<T> {
     type Hasher = Fnv1a<T>;
 
+    #[inline]
     fn build_hasher(&self) -> Self::Hasher {
         Self::Hasher::with_seed(self.0)
     }
@@ -49,6 +53,7 @@ pub struct Fnv1aDefaultBuildHasher;
 impl<T: FnvConfig> BuildHasher<T> for Fnv1aDefaultBuildHasher {
     type Hasher = Fnv1a<T>;
 
+    #[inline]
     fn build_hasher(&self) -> Self::Hasher {
         Self::Hasher::new()
     }
@@ -107,6 +112,7 @@ impl FnvConfig for u32 {
     const OFFSET_BASIS: Self = 0x811c9dc5;
     const PRIME: Self = 0x01000193;
 
+    #[inline]
     fn wrapping_mul(self, rhs: Self) -> Self {
         self.wrapping_mul(rhs)
     }
@@ -116,6 +122,7 @@ impl FnvConfig for u64 {
     const OFFSET_BASIS: Self = 0xcbf29ce484222325;
     const PRIME: Self = 0x100000001b3;
 
+    #[inline]
     fn wrapping_mul(self, rhs: Self) -> Self {
         self.wrapping_mul(rhs)
     }
@@ -125,6 +132,7 @@ impl FnvConfig for u128 {
     const OFFSET_BASIS: Self = 0x6c62272e07bb014262b821756295c58d;
     const PRIME: Self = 0x0000000001000000000000000000013b;
 
+    #[inline]
     fn wrapping_mul(self, rhs: Self) -> Self {
         self.wrapping_mul(rhs)
     }
@@ -141,6 +149,7 @@ impl FnvConfig for U256 {
         0xdd268dbcaac55036,
     ]);
 
+    #[inline]
     fn wrapping_mul(self, rhs: Self) -> Self {
         self.wrapping_mul(rhs)
     }
@@ -220,11 +229,13 @@ impl<T: FnvConfig> Fnv1a<T> {
     const PRIME: T = T::PRIME;
 
     /// Create a new `Fnv1a` hasher using the default seed.
+    #[inline]
     pub const fn new() -> Self {
         Self::with_seed(Self::OFFSET_BASIS)
     }
 
     /// Create a new `Fnv1a` hasher with a custom seed.
+    #[inline]
     pub const fn with_seed(seed: T) -> Self {
         Self(seed)
     }
@@ -233,12 +244,14 @@ impl<T: FnvConfig> Fnv1a<T> {
 impl<T: FnvConfig> EndianNeutralHasher for Fnv1a<T> {}
 
 impl<T: FnvConfig> Default for Fnv1a<T> {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl<T: FnvConfig> Hasher<T> for Fnv1a<T> {
+    #[inline]
     fn write(&mut self, bytes: &[u8]) {
         for &byte in bytes {
             self.0 ^= byte.into();
@@ -246,6 +259,7 @@ impl<T: FnvConfig> Hasher<T> for Fnv1a<T> {
         }
     }
 
+    #[inline]
     fn finish(&self) -> T {
         self.0
     }
