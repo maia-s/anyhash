@@ -11,15 +11,17 @@ nightly = []
 
 # optional integrations
 bnum = ["dep:bnum"]
+bytemuck = ["dep:bytemuck"]
 
 # hashing algorithms
 fnv1a = []
-spooky = []
-xxh64 = []
+spooky = ["bytemuck"]
+xxh64 = ["bytemuck"]
 
 [dependencies]
 hash-t-macros = { path = "../hash-t-macros" }
 bnum = { version = "0.10", optional = true }
+bytemuck = { version = "1.14", features = ["min_const_generics"], optional = true }
 
 [package.metadata.docs.rs]
 all-features = true

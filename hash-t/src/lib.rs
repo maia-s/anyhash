@@ -707,11 +707,9 @@ impl<T, U: BuildHasher<T> + Default> Default for BuildHasherBe<T, U> {
 
 #[doc(hidden)]
 pub mod internal {
-    use core::{
-        marker::PhantomData,
-        mem::{align_of, transmute},
-        slice,
-    };
+    use core::marker::PhantomData;
+
+    use bytemuck::{cast_mut, cast_ref, Pod};
 
     use super::*;
 
@@ -772,150 +770,12 @@ pub mod internal {
         impl_hasher_core_fwd!(&mut);
     }
 
-    pub(crate) trait PunSlice<T> {
-        fn pun_slice(&self) -> &[T];
-        fn pun_slice_mut(&mut self) -> &mut [T];
-    }
-
-    impl<T> PunSlice<T> for [T] {
-        #[inline]
-        fn pun_slice(&self) -> &[T] {
-            self
-        }
-
-        #[inline]
-        fn pun_slice_mut(&mut self) -> &mut [T] {
-            self
-        }
-    }
-
-    impl PunSlice<u32> for [u64] {
-        #[inline]
-        fn pun_slice(&self) -> &[u32] {
-            let ptr = self.as_ptr();
-            let len = self.len();
-            unsafe {
-                // # Safety
-                // The result has the same size as the input and a smaller alignment requirement.
-                slice::from_raw_parts(ptr as *const _, len * 2)
-            }
-        }
-
-        #[inline]
-        fn pun_slice_mut(&mut self) -> &mut [u32] {
-            let ptr = self.as_mut_ptr();
-            let len = self.len();
-            unsafe {
-                // # Safety
-                // The result has the same size as the input and a smaller alignment requirement.
-                slice::from_raw_parts_mut(ptr as *mut _, len * 2)
-            }
-        }
-    }
-
-    impl PunSlice<u16> for [u64] {
-        #[inline]
-        fn pun_slice(&self) -> &[u16] {
-            let ptr = self.as_ptr();
-            let len = self.len();
-            unsafe {
-                // # Safety
-                // The result has the same size as the input and a smaller alignment requirement.
-                slice::from_raw_parts(ptr as *const _, len * 4)
-            }
-        }
-
-        #[inline]
-        fn pun_slice_mut(&mut self) -> &mut [u16] {
-            let ptr = self.as_mut_ptr();
-            let len = self.len();
-            unsafe {
-                // # Safety
-                // The result has the same size as the input and a smaller alignment requirement.
-                slice::from_raw_parts_mut(ptr as *mut _, len * 4)
-            }
-        }
-    }
-
-    impl PunSlice<u8> for [u64] {
-        #[inline]
-        fn pun_slice(&self) -> &[u8] {
-            let ptr = self.as_ptr();
-            let len = self.len();
-            unsafe {
-                // # Safety
-                // The result has the same size as the input and a smaller alignment requirement.
-                slice::from_raw_parts(ptr as *const _, len * 8)
-            }
-        }
-
-        #[inline]
-        fn pun_slice_mut(&mut self) -> &mut [u8] {
-            let ptr = self.as_mut_ptr();
-            let len = self.len();
-            unsafe {
-                // # Safety
-                // The result has the same size as the input and a smaller alignment requirement.
-                slice::from_raw_parts_mut(ptr as *mut _, len * 8)
-            }
-        }
-    }
-
-    pub(crate) trait TryPunSlice<T> {
-        fn try_pun_slice(&self) -> Option<&[T]>;
-        fn try_pun_slice_mut(&mut self) -> Option<&mut [T]>;
-    }
-
-    impl<T> TryPunSlice<T> for [T] {
-        #[inline]
-        fn try_pun_slice(&self) -> Option<&[T]> {
-            Some(self)
-        }
-
-        #[inline]
-        fn try_pun_slice_mut(&mut self) -> Option<&mut [T]> {
-            Some(self)
-        }
-    }
-
-    impl TryPunSlice<u64> for [u8] {
-        #[inline]
-        fn try_pun_slice(&self) -> Option<&[u64]> {
-            let ptr = self.as_ptr();
-            let len = self.len();
-            if ptr.align_offset(align_of::<u64>()) == 0 && len % 8 == 0 {
-                Some(unsafe {
-                    // # Safety
-                    // Size and alignment has been checked.
-                    slice::from_raw_parts(ptr as *const _, len / 8)
-                })
-            } else {
-                None
-            }
-        }
-
-        #[inline]
-        fn try_pun_slice_mut(&mut self) -> Option<&mut [u64]> {
-            let ptr = self.as_mut_ptr();
-            let len = self.len();
-            if ptr.align_offset(align_of::<u64>()) == 0 && len % 8 == 0 {
-                Some(unsafe {
-                    // # Safety
-                    // Size and alignment has been checked.
-                    slice::from_raw_parts_mut(ptr as *mut _, len / 8)
-                })
-            } else {
-                None
-            }
-        }
-    }
-
     pub(crate) trait ConstValue: Copy + Default {
         const VALUE: usize;
-        type ArrayU64: Default;
-        type Array2xU32;
-        type Array4xU16;
-        type Array8xU8;
+        type ArrayU64: Pod + Default;
+        type Array2xU32: Pod;
+        type Array4xU16: Pod;
+        type Array8xU8: Pod;
     }
 
     macro_rules! define_const_values {
@@ -945,10 +805,12 @@ pub mod internal {
         N24 = 24,
     }
 
+    #[cfg(feature = "bytemuck")]
     #[derive(Clone, Copy, Default)]
     #[repr(transparent)]
     pub(crate) struct Buffer<N: ConstValue>(N::ArrayU64);
 
+    #[cfg(feature = "bytemuck")]
     #[allow(dead_code)]
     impl<N: ConstValue> Buffer<N> {
         #[inline]
@@ -958,42 +820,42 @@ pub mod internal {
 
         #[inline]
         pub fn as_bytes(&self) -> &N::Array8xU8 {
-            unsafe { transmute::<&N::ArrayU64, &N::Array8xU8>(&self.0) }
+            cast_ref(&self.0)
         }
 
         #[inline]
         pub fn as_bytes_mut(&mut self) -> &mut N::Array8xU8 {
-            unsafe { transmute::<&mut N::ArrayU64, &mut N::Array8xU8>(&mut self.0) }
+            cast_mut(&mut self.0)
         }
 
         #[inline]
         pub fn as_u16s(&self) -> &N::Array4xU16 {
-            unsafe { transmute::<&N::ArrayU64, &N::Array4xU16>(&self.0) }
+            cast_ref(&self.0)
         }
 
         #[inline]
         pub fn as_u16s_mut(&mut self) -> &mut N::Array4xU16 {
-            unsafe { transmute::<&mut N::ArrayU64, &mut N::Array4xU16>(&mut self.0) }
+            cast_mut(&mut self.0)
         }
 
         #[inline]
         pub fn as_u32s(&self) -> &N::Array2xU32 {
-            unsafe { transmute::<&N::ArrayU64, &N::Array2xU32>(&self.0) }
+            cast_ref(&self.0)
         }
 
         #[inline]
         pub fn as_u32s_mut(&mut self) -> &mut N::Array2xU32 {
-            unsafe { transmute::<&mut N::ArrayU64, &mut N::Array2xU32>(&mut self.0) }
+            cast_mut(&mut self.0)
         }
 
         #[inline]
         pub fn as_u64s(&self) -> &N::ArrayU64 {
-            &self.0
+            cast_ref(&self.0)
         }
 
         #[inline]
         pub fn as_u64s_mut(&mut self) -> &mut N::ArrayU64 {
-            &mut self.0
+            cast_mut(&mut self.0)
         }
     }
 }

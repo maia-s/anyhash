@@ -25,9 +25,11 @@ macro_rules! fallthrough_jump_table {
 
 use core::marker::PhantomData;
 
+use bytemuck::{cast_slice, cast_slice_mut};
+
 use crate::{
     impl_core_build_hasher, impl_core_hasher,
-    internal::{Buffer, PunSlice, TryPunSlice, N24},
+    internal::{Buffer, N24},
 };
 
 use crate::{BuildHasher, Hasher};
@@ -265,8 +267,8 @@ impl<V: Version> SpookyV<V> {
         }
 
         let data = &self.data.as_u64s()[i..i + (remainder + 7) / 8];
-        let data_u8 = PunSlice::<u8>::pun_slice(data);
-        let data_u32 = PunSlice::<u32>::pun_slice(data);
+        let data_u8: &[u8] = cast_slice(data);
+        let data_u32: &[u32] = cast_slice(data);
 
         fallthrough_jump_table! {
             switch (remainder) {
@@ -466,7 +468,7 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
         let remainder = (length - length_to_end_64 * 8) as u8;
 
         if bytes.as_ptr().align_offset(8) == 0 {
-            let u64s = bytes.try_pun_slice().unwrap();
+            let u64s = cast_slice(bytes);
             for chunk in u64s.chunks_exact(SC_NUM_VARS) {
                 Self::mix(chunk.try_into().unwrap(), &mut h);
             }
@@ -510,7 +512,7 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
         let mut data: [u64; SC_NUM_VARS] = self.data.as_u64s()[offset..][..SC_NUM_VARS]
             .try_into()
             .unwrap();
-        let data_u8 = PunSlice::<u8>::pun_slice_mut(&mut data[..]);
+        let data_u8 = cast_slice_mut(&mut data[..]);
 
         data_u8[remainder as usize..].fill(0);
         data_u8[SC_BLOCK_SIZE - 1] = remainder;
