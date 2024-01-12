@@ -1,4 +1,4 @@
-//! This crate provides proc macros for the `hash-t` crate. Don't use this directly.
+#![doc = include_str!("../README.md")]
 
 use proc_macro::TokenStream as TokenStream1;
 use proc_macro2::{Ident, Span, TokenStream};

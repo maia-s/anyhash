@@ -1,15 +1,8 @@
-//! Hashing traits, algorithms and tools.
-//!
-//! This crate provides the traits [`Hash`], [`Hasher`] and [`BuildHasher`], which are exactly
-//! like their counterparts in `core`/`std`, except that they're generic over the type of the hash.
-//! [`Hasher`] provides some extra methods.
-//!
-//! It also optionally provides some hash algorithms that implement these traits.
-
 #![no_std]
 #![cfg_attr(feature = "nightly", feature(doc_auto_cfg))]
 #![cfg_attr(feature = "nightly", feature(hasher_prefixfree_extras))]
 #![deny(missing_docs)]
+#![doc = include_str!("../README.md")]
 
 extern crate self as hash_t;
 
