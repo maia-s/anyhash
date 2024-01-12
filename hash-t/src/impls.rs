@@ -1,22 +1,12 @@
 use crate::{impl_hash_t, Hash, Hasher};
 
 macro_rules! impl_hasher_deref_writes {
-    ($($t:ty { ne:$ne:ident, le:$le:ident, be:$be:ident }),* $(,)?) => { $(
+    ($($t:ty: $fn:ident),* $(,)?) => { $(
         #[inline]
-        fn $ne(&mut self, i: $t) {
-            (**self).$ne(i);
+        fn $fn(&mut self, i: $t) {
+            (**self).$fn(i);
         }
-
-        #[inline]
-        fn $le(&mut self, i: $t) {
-            (**self).$le(i);
-        }
-
-        #[inline]
-        fn $be(&mut self, i: $t) {
-            (**self).$be(i);
-        }
-    )* };
+    )* }
 }
 
 macro_rules! impl_hasher_deref {
@@ -42,17 +32,17 @@ macro_rules! impl_hasher_deref {
         }
 
         impl_hasher_deref_writes! {
-            u16 { ne: write_u16, le: write_u16_le, be: write_u16_be },
-            u32 { ne: write_u32, le: write_u32_le, be: write_u32_be },
-            u64 { ne: write_u64, le: write_u64_le, be: write_u64_be },
-            u128 { ne: write_u128, le: write_u128_le, be: write_u128_be },
-            usize { ne: write_usize, le: write_usize_le, be: write_usize_be },
+            u16: write_u16,
+            u32: write_u32,
+            u64: write_u64,
+            u128: write_u128,
+            usize: write_usize,
 
-            i16 { ne: write_i16, le: write_i16_le, be: write_i16_be },
-            i32 { ne: write_i32, le: write_i32_le, be: write_i32_be },
-            i64 { ne: write_i64, le: write_i64_le, be: write_i64_be },
-            i128 { ne: write_i128, le: write_i128_le, be: write_i128_be },
-            isize { ne: write_isize, le: write_isize_le, be: write_isize_be },
+            i16: write_i16,
+            i32: write_i32,
+            i64: write_i64,
+            i128: write_i128,
+            isize: write_isize,
         }
 
         #[inline]

@@ -246,6 +246,82 @@ pub use hash_t_macros::impl_hash_t;
 /// ```
 pub use hash_t_macros::impl_hash_u64;
 
+macro_rules! define_writes_for_hasher {
+    (native endian) => {
+        define_writes_for_hasher!("hasher.": to_ne_bytes);
+    };
+
+    (little endian) => {
+        define_writes_for_hasher!("hasher in little endian byte order.": to_le_bytes);
+    };
+
+    (big endian) => {
+        define_writes_for_hasher!("hasher in big endian byte order.": to_be_bytes);
+    };
+
+    ($desc:literal: $c:ident) => {
+        /// Writes a single `u8` into this
+        #[doc = $desc]
+        #[inline]
+        fn write_u8(&mut self, i: u8) {
+            self.write(&[i]);
+        }
+
+        define_writes_for_hasher! {
+            $desc: $c,
+            u16: write_u16,
+            u32: write_u32,
+            u64: write_u64,
+            u128: write_u128,
+            usize: write_usize,
+        }
+
+        /// Writes a single `i8` into this
+        #[doc = $desc]
+        #[inline]
+        fn write_i8(&mut self, i: i8) {
+            self.write(&[i as u8]);
+        }
+
+        define_writes_for_hasher! {
+            $desc: $c,
+            i16: write_i16,
+            i32: write_i32,
+            i64: write_i64,
+            i128: write_i128,
+            isize: write_isize,
+        }
+
+        /// Writes a length prefix into this
+        #[doc = $desc]
+        #[inline]
+        fn write_length_prefix(&mut self, len: usize) {
+            self.write_usize(len);
+        }
+
+        /// Writes a single str into this
+        #[doc = $desc]
+        #[inline]
+        fn write_str(&mut self, s: &str) {
+            self.write(s.as_bytes());
+            self.write_u8(0xff);
+        }
+    };
+
+    ($desc:literal: $c:ident, $($t:ty: $fn:ident),* $(,)*) => {
+        $(
+            /// Writes a single `
+            #[doc = stringify!($t)]
+            /// ` into this
+            #[doc = $desc]
+            #[inline]
+            fn $fn(&mut self, i: $t) {
+                self.write(&i.$c())
+            }
+        )*
+    };
+}
+
 #[cfg(test)]
 macro_rules! test_bytes_hash {
     ($([$hashfn:ident] $($bs:ident: $hash:expr),* $(,)?)*) => { $(
@@ -262,13 +338,13 @@ macro_rules! test_bytes_hash {
 }
 
 macro_rules! impl_hasher_core_fwd_writes {
-    ([] $($t:ty: $ne:ident),* $(,)?) => { $(
+    ([] $($t:ty: $fn:ident),* $(,)?) => { $(
         #[inline(always)]
-        fn $ne(&mut self, i: $t) { H::$ne(self.0, i); }
+        fn $fn(&mut self, i: $t) { H::$fn(self.0, i); }
     )* };
-    ([&mut] $($t:ty: $ne:ident),* $(,)?) => { $(
+    ([&mut] $($t:ty: $fn:ident),* $(,)?) => { $(
         #[inline(always)]
-        fn $ne(&mut self, i: $t) { H::$ne(&mut self.0, i); }
+        fn $fn(&mut self, i: $t) { H::$fn(&mut self.0, i); }
     )* };
 }
 
@@ -344,58 +420,6 @@ pub trait Hash<T> {
     }
 }
 
-macro_rules! make_hasher_writes {
-    ($($t:ty { ne:$ne:ident, le:$le:ident, be:$be:ident }),* $(,)?) => { $(
-        #[doc = "Writes a single `"]
-        #[doc = stringify!($t)]
-        #[doc = "` into this hasher in native byte order."]
-        #[inline]
-        fn $ne(&mut self, i: $t) {
-            self.write(&i.to_ne_bytes());
-        }
-
-        #[doc = "Writes a single `"]
-        #[doc = stringify!($t)]
-        #[doc = "` into this hasher in little endian byte order."]
-        #[inline]
-        fn $le(&mut self, i: $t) {
-            self.write(&i.to_le_bytes());
-        }
-
-        #[doc = "Writes a single `"]
-        #[doc = stringify!($t)]
-        #[doc = "` into this hasher in big endian byte order."]
-        #[inline]
-        fn $be(&mut self, i: $t) {
-            self.write(&i.to_be_bytes());
-        }
-    )* };
-}
-
-macro_rules! make_hasher_writes_map {
-    ($endian:literal $($t:ty { ne:$ne:ident -> $nem:ident, le:$le:ident, be:$be:ident }),* $(,)?) => { $(
-        #[doc = "Writes a single `"]
-        #[doc = stringify!($t)]
-        #[doc = "` into this hasher in "]
-        #[doc = $endian]
-        #[doc = " byte order."]
-        #[inline]
-        fn $ne(&mut self, i: $t) {
-            self.$nem(i);
-        }
-
-        #[inline]
-        fn $le(&mut self, i: $t) {
-            self.write(&i.to_le_bytes());
-        }
-
-        #[inline]
-        fn $be(&mut self, i: $t) {
-            self.write(&i.to_be_bytes());
-        }
-    )* };
-}
-
 /// A trait for hashing an arbitrary stream of bytes.
 pub trait Hasher<T> {
     /// Returns the hash value for the values written so far.
@@ -404,46 +428,7 @@ pub trait Hasher<T> {
     /// Writes some data into this hasher.
     fn write(&mut self, bytes: &[u8]);
 
-    /// Writes a single `u8` into this hasher.
-    #[inline]
-    fn write_u8(&mut self, i: u8) {
-        self.write(&[i]);
-    }
-
-    make_hasher_writes! {
-        u16 { ne: write_u16, le: write_u16_le, be: write_u16_be },
-        u32 { ne: write_u32, le: write_u32_le, be: write_u32_be },
-        u64 { ne: write_u64, le: write_u64_le, be: write_u64_be },
-        u128 { ne: write_u128, le: write_u128_le, be: write_u128_be },
-        usize { ne: write_usize, le: write_usize_le, be: write_usize_be },
-    }
-
-    /// Writes a single `i8` into this hasher.
-    #[inline]
-    fn write_i8(&mut self, i: i8) {
-        self.write(&[i as u8]);
-    }
-
-    make_hasher_writes! {
-        i16 { ne: write_i16, le: write_i16_le, be: write_i16_be },
-        i32 { ne: write_i32, le: write_i32_le, be: write_i32_be },
-        i64 { ne: write_i64, le: write_i64_le, be: write_i64_be },
-        i128 { ne: write_i128, le: write_i128_le, be: write_i128_be },
-        isize { ne: write_isize, le: write_isize_le, be: write_isize_be },
-    }
-
-    /// Writes a length prefix into this hasher, as part of being prefix-free.
-    #[inline]
-    fn write_length_prefix(&mut self, len: usize) {
-        self.write_usize(len);
-    }
-
-    /// Writes a single str into this hasher.
-    #[inline]
-    fn write_str(&mut self, s: &str) {
-        self.write(s.as_bytes());
-        self.write_u8(0xff);
-    }
+    define_writes_for_hasher!(native endian);
 }
 
 /// A trait for creating instances of [`Hasher`].
@@ -462,187 +447,138 @@ pub trait BuildHasher<T> {
     }
 }
 
-/// Marker trait for hashers whose hash is independent of the endianness of the host,
-/// given the same byte stream.
+/// Marker trait for hashers whose hashing algorithm calculates the same hash
+/// on hosts of different endiannesses, given the same byte stream.
+pub trait EndianNeutralAlgorithm {}
+
+/// Marker trait for hashers whose write methods write data in the same order
+/// regardless of the endianness of the host. Be aware that a type may write
+/// endian dependent data to the hasher in other ways, so this isn't a guarantee.
 ///
-/// Endian neutral hashers have the capacity to create hashes that don't depend on the
-/// endianness of the host, but the types hashed must also do endian neutral hashing
-/// for this to be possible. It's not enough for the hasher to to be endian neutral;
-/// the byte stream sent to the hasher must be the same regardless of endianness.
-/// The `HasherLe` and `HasherBe` wrapper types can assist with this.
-pub trait EndianNeutralHasher {}
+/// The [`HasherLe`] and [`HasherBe`] types can be used to create hashers that
+/// implement this trait.
+pub trait EndianNeutralWrites {}
+
+/// Automatically implemented for [`Hasher`]s that implement both [`EndianNeutralAlgorithm`]
+/// and [`EndianNeutralWrites`].
+pub trait EndianNeutralHasher<T>: Hasher<T> + EndianNeutralAlgorithm + EndianNeutralWrites {}
+
+impl<T, H> EndianNeutralHasher<T> for H where
+    H: ?Sized + Hasher<T> + EndianNeutralAlgorithm + EndianNeutralWrites
+{
+}
 
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to little endian.
 ///
 /// This can aid in creating an endian neutral hash, but be aware that types may write endian
-/// dependent data in ways that can't be detected by this wrapper. The wrapped hasher itself
-/// must also support endian neutral hashing for this to work.
+/// dependent data in ways that can't be detected by this wrapper. The wrapped hasher's
+/// algorithm must also support endian neutral hashing for this to work.
 ///
-/// Endian neutral hashers defined in this crate implement the [`EndianNeutralHasher`] trait.
-pub struct HasherLe<T, U: Hasher<T>>(U, PhantomData<fn() -> T>);
+/// Endian neutral hashers defined in this crate implement the [`EndianNeutralAlgorithm`] trait.
+pub struct HasherLe<T, H: Hasher<T>>(H, PhantomData<fn() -> T>);
 
-impl<T, U: Hasher<T> + EndianNeutralHasher> EndianNeutralHasher for HasherLe<T, U> {}
+impl_core_hasher!(impl<T, H: Hasher<T>> HasherLe<T, H>);
 
-impl_core_hasher!(impl<T, U: Hasher<T>> HasherLe<T, U>);
+impl<T, H: Hasher<T> + EndianNeutralAlgorithm> EndianNeutralAlgorithm for HasherLe<T, H> {}
+impl<T, H: Hasher<T>> EndianNeutralWrites for HasherLe<T, H> {}
 
-impl<T, U: Hasher<T>> HasherLe<T, U> {
+impl<T, H: Hasher<T>> HasherLe<T, H> {
     /// Create a new `HasherLe`.
-    pub const fn new(hasher: U) -> Self {
+    #[inline]
+    pub const fn new(hasher: H) -> Self {
         Self(hasher, PhantomData)
     }
 }
 
-impl<T, U: Hasher<T>> Hasher<T> for HasherLe<T, U> {
+impl<T, H: Hasher<T>> Hasher<T> for HasherLe<T, H> {
+    #[inline]
     fn finish(&self) -> T {
         self.0.finish()
     }
 
+    #[inline]
     fn write(&mut self, bytes: &[u8]) {
         self.0.write(bytes);
     }
 
-    #[inline]
-    fn write_u8(&mut self, i: u8) {
-        self.0.write(&[i]);
-    }
-
-    make_hasher_writes_map! {
-        "little endian"
-        u16 { ne: write_u16 -> write_u16_le, le: write_u16_le, be: write_u16_be },
-        u32 { ne: write_u32 -> write_u32_le, le: write_u32_le, be: write_u32_be },
-        u64 { ne: write_u64 -> write_u64_le, le: write_u64_le, be: write_u64_be },
-        u128 { ne: write_u128 -> write_u128_le, le: write_u128_le, be: write_u128_be },
-        usize { ne: write_usize -> write_usize_le, le: write_usize_le, be: write_usize_be },
-    }
-
-    #[inline]
-    fn write_i8(&mut self, i: i8) {
-        self.0.write(&[i as u8]);
-    }
-
-    make_hasher_writes_map! {
-        "little endian"
-        i16 { ne: write_i16 -> write_i16_le, le: write_i16_le, be: write_i16_be },
-        i32 { ne: write_i32 -> write_i32_le, le: write_i32_le, be: write_i32_be },
-        i64 { ne: write_i64 -> write_i64_le, le: write_i64_le, be: write_i64_be },
-        i128 { ne: write_i128 -> write_i128_le, le: write_i128_le, be: write_i128_be },
-        isize { ne: write_isize -> write_isize_le, le: write_isize_le, be: write_isize_be },
-    }
-
-    #[inline]
-    fn write_length_prefix(&mut self, len: usize) {
-        self.0.write_usize(len);
-    }
-
-    #[inline]
-    fn write_str(&mut self, s: &str) {
-        self.0.write(s.as_bytes());
-        self.0.write_u8(0xff);
-    }
+    define_writes_for_hasher!(little endian);
 }
 
-impl<T, U: Hasher<T> + Debug> Debug for HasherLe<T, U> {
+impl<T, H: Hasher<T> + Debug> Debug for HasherLe<T, H> {
+    #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         Debug::fmt(&self.0, f)
     }
 }
 
-impl<T, U: Hasher<T> + Clone> Clone for HasherLe<T, U> {
+impl<T, H: Hasher<T> + Clone> Clone for HasherLe<T, H> {
+    #[inline]
     fn clone(&self) -> Self {
         Self::new(self.0.clone())
     }
 }
 
-impl<T, U: Hasher<T> + Default> Default for HasherLe<T, U> {
+impl<T, H: Hasher<T> + Default> Default for HasherLe<T, H> {
+    #[inline]
     fn default() -> Self {
-        Self::new(U::default())
+        Self::new(H::default())
     }
 }
 
 /// Wrapper for types implementing [`Hasher<T>`] to change native endian writes to big endian.
 ///
 /// This can aid in creating an endian neutral hash, but be aware that types may write endian
-/// dependent data in ways that can't be detected by this wrapper. The wrapped hasher itself
-/// must also support endian neutral hashing for this to work.
+/// dependent data in ways that can't be detected by this wrapper. The wrapped hasher's
+/// algorithm must also support endian neutral hashing for this to work.
 ///
-/// Endian neutral hashers defined in this crate implement the [`EndianNeutralHasher`] trait.
-pub struct HasherBe<T, U: Hasher<T>>(U, PhantomData<fn() -> T>);
+/// Endian neutral hashers defined in this crate implement the [`EndianNeutralAlgorithm`] trait.
+pub struct HasherBe<T, H: Hasher<T>>(H, PhantomData<fn() -> T>);
 
-impl_core_hasher!(impl<T, U: Hasher<T>> HasherBe<T, U>);
+impl_core_hasher!(impl<T, H: Hasher<T>> HasherBe<T, H>);
 
-impl<T, U: Hasher<T> + EndianNeutralHasher> EndianNeutralHasher for HasherBe<T, U> {}
+impl<T, H: Hasher<T> + EndianNeutralAlgorithm> EndianNeutralAlgorithm for HasherBe<T, H> {}
+impl<T, H: Hasher<T>> EndianNeutralWrites for HasherBe<T, H> {}
 
-impl<T, U: Hasher<T>> HasherBe<T, U> {
+impl<T, H: Hasher<T>> HasherBe<T, H> {
     /// Create a new `HasherBe`.
-    pub const fn new(hasher: U) -> Self {
+    #[inline]
+    pub const fn new(hasher: H) -> Self {
         Self(hasher, PhantomData)
     }
 }
 
-impl<T, U: Hasher<T>> Hasher<T> for HasherBe<T, U> {
+impl<T, H: Hasher<T>> Hasher<T> for HasherBe<T, H> {
+    #[inline]
     fn finish(&self) -> T {
         self.0.finish()
     }
 
+    #[inline]
     fn write(&mut self, bytes: &[u8]) {
         self.0.write(bytes);
     }
 
-    #[inline]
-    fn write_u8(&mut self, i: u8) {
-        self.0.write(&[i]);
-    }
-
-    make_hasher_writes_map! {
-        "big endian"
-        u16 { ne: write_u16 -> write_u16_be, le: write_u16_le, be: write_u16_be },
-        u32 { ne: write_u32 -> write_u32_be, le: write_u32_le, be: write_u32_be },
-        u64 { ne: write_u64 -> write_u64_be, le: write_u64_le, be: write_u64_be },
-        u128 { ne: write_u128 -> write_u128_be, le: write_u128_le, be: write_u128_be },
-        usize { ne: write_usize -> write_usize_be, le: write_usize_le, be: write_usize_be },
-    }
-
-    #[inline]
-    fn write_i8(&mut self, i: i8) {
-        self.0.write(&[i as u8]);
-    }
-
-    make_hasher_writes_map! {
-        "big endian"
-        i16 { ne: write_i16 -> write_i16_be, le: write_i16_le, be: write_i16_be },
-        i32 { ne: write_i32 -> write_i32_be, le: write_i32_le, be: write_i32_be },
-        i64 { ne: write_i64 -> write_i64_be, le: write_i64_le, be: write_i64_be },
-        i128 { ne: write_i128 -> write_i128_be, le: write_i128_le, be: write_i128_be },
-        isize { ne: write_isize -> write_isize_be, le: write_isize_le, be: write_isize_be },
-    }
-
-    #[inline]
-    fn write_length_prefix(&mut self, len: usize) {
-        self.0.write_usize(len);
-    }
-
-    #[inline]
-    fn write_str(&mut self, s: &str) {
-        self.0.write(s.as_bytes());
-        self.0.write_u8(0xff);
-    }
+    define_writes_for_hasher!(big endian);
 }
 
-impl<T, U: Hasher<T> + Debug> Debug for HasherBe<T, U> {
+impl<T, H: Hasher<T> + Debug> Debug for HasherBe<T, H> {
+    #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         Debug::fmt(&self.0, f)
     }
 }
 
-impl<T, U: Hasher<T> + Clone> Clone for HasherBe<T, U> {
+impl<T, H: Hasher<T> + Clone> Clone for HasherBe<T, H> {
+    #[inline]
     fn clone(&self) -> Self {
         Self::new(self.0.clone())
     }
 }
 
-impl<T, U: Hasher<T> + Default> Default for HasherBe<T, U> {
+impl<T, H: Hasher<T> + Default> Default for HasherBe<T, H> {
+    #[inline]
     fn default() -> Self {
-        Self::new(U::default())
+        Self::new(H::default())
     }
 }
 
@@ -653,6 +589,7 @@ impl_core_build_hasher!(impl<T, U: BuildHasher<T>> BuildHasherLe<T, U>);
 
 impl<T, U: BuildHasher<T>> BuildHasherLe<T, U> {
     /// Create a new `BuildHasherLe`.
+    #[inline]
     pub const fn new(build_hasher: U) -> Self {
         Self(build_hasher, PhantomData)
     }
@@ -668,18 +605,21 @@ impl<T, U: BuildHasher<T>> BuildHasher<T> for BuildHasherLe<T, U> {
 }
 
 impl<T, U: BuildHasher<T> + Debug> Debug for BuildHasherLe<T, U> {
+    #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         Debug::fmt(&self.0, f)
     }
 }
 
 impl<T, U: BuildHasher<T> + Clone> Clone for BuildHasherLe<T, U> {
+    #[inline]
     fn clone(&self) -> Self {
         Self::new(self.0.clone())
     }
 }
 
 impl<T, U: BuildHasher<T> + Default> Default for BuildHasherLe<T, U> {
+    #[inline]
     fn default() -> Self {
         Self::new(U::default())
     }
@@ -692,6 +632,7 @@ impl_core_build_hasher!(impl<T, U: BuildHasher<T>> BuildHasherBe<T, U>);
 
 impl<T, U: BuildHasher<T>> BuildHasherBe<T, U> {
     /// Create a new `BuildHasherBe`.
+    #[inline]
     pub const fn new(build_hasher: U) -> Self {
         Self(build_hasher, PhantomData)
     }
@@ -707,18 +648,21 @@ impl<T, U: BuildHasher<T>> BuildHasher<T> for BuildHasherBe<T, U> {
 }
 
 impl<T, U: BuildHasher<T> + Debug> Debug for BuildHasherBe<T, U> {
+    #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         Debug::fmt(&self.0, f)
     }
 }
 
 impl<T, U: BuildHasher<T> + Clone> Clone for BuildHasherBe<T, U> {
+    #[inline]
     fn clone(&self) -> Self {
         Self::new(self.0.clone())
     }
 }
 
 impl<T, U: BuildHasher<T> + Default> Default for BuildHasherBe<T, U> {
+    #[inline]
     fn default() -> Self {
         Self::new(U::default())
     }
