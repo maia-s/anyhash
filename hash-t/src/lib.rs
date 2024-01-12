@@ -819,7 +819,7 @@ pub mod internal {
         }
     }
 
-    pub(crate) trait ConstValue: Copy {
+    pub(crate) trait ConstValue: Copy + Default {
         const VALUE: usize;
         type ArrayU64: Default;
         type Array2xU32;
@@ -829,7 +829,7 @@ pub mod internal {
 
     macro_rules! define_const_values {
         ($($name:ident = $value:expr),* $(,)?) => { $(
-            #[derive(Clone, Copy)]
+            #[derive(Clone, Copy, Default)]
             pub(crate) struct $name;
 
             impl ConstValue for $name {
@@ -851,9 +851,10 @@ pub mod internal {
 
     define_const_values! {
         N4 = 4,
+        N24 = 24,
     }
 
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, Default)]
     #[repr(transparent)]
     pub(crate) struct Buffer<N: ConstValue>(N::ArrayU64);
 

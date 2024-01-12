@@ -25,7 +25,10 @@ macro_rules! fallthrough_jump_table {
 
 use core::marker::PhantomData;
 
-use crate::{impl_core_build_hasher, impl_core_hasher, internal::PunSlice};
+use crate::{
+    impl_core_build_hasher, impl_core_hasher,
+    internal::{Buffer, PunSlice, N24},
+};
 
 use crate::{BuildHasher, Hasher};
 
@@ -169,7 +172,7 @@ pub type Spooky = SpookyV<V2>;
 /// Hasher using the SpookyHash algorithm.
 #[derive(Clone)]
 pub struct SpookyV<V: Version = V2> {
-    data: [u64; 2 * SC_NUM_VARS],
+    data: Buffer<N24>,
     state: [u64; SC_NUM_VARS],
     length: usize,
     remainder: u8,
@@ -181,7 +184,7 @@ impl<V: Version> SpookyV<V> {
     #[inline]
     pub fn new() -> Self {
         Self {
-            data: [0; SC_NUM_VARS * 2],
+            data: Buffer::new(),
             state: [0; SC_NUM_VARS],
             length: 0,
             remainder: 0,
@@ -196,7 +199,7 @@ impl<V: Version> SpookyV<V> {
         state[0] = seed1;
         state[1] = seed2;
         Self {
-            data: [0; SC_NUM_VARS * 2],
+            data: Buffer::new(),
             state,
             length: 0,
             remainder: 0,
@@ -238,7 +241,7 @@ impl<V: Version> SpookyV<V> {
         if length > 15 {
             i = length / 32 * 4;
 
-            for chunk in self.data[..i].chunks(4) {
+            for chunk in self.data.as_u64s()[..i].chunks(4) {
                 h[2] = h[2].wrapping_add(chunk[0]);
                 h[3] = h[3].wrapping_add(chunk[1]);
                 Self::short_mix(&mut h);
@@ -248,8 +251,8 @@ impl<V: Version> SpookyV<V> {
 
             if remainder >= 16 {
                 remainder -= 16;
-                h[2] = h[2].wrapping_add(self.data[i]);
-                h[3] = h[3].wrapping_add(self.data[i + 1]);
+                h[2] = h[2].wrapping_add(self.data.as_u64s()[i]);
+                h[3] = h[3].wrapping_add(self.data.as_u64s()[i + 1]);
                 Self::short_mix(&mut h);
                 i += 2;
             }
@@ -261,7 +264,7 @@ impl<V: Version> SpookyV<V> {
             h[3] = h[3].wrapping_add((length as u64).rotate_left(56));
         }
 
-        let data = &self.data[i..i + (remainder + 7) / 8];
+        let data = &self.data.as_u64s()[i..i + (remainder + 7) / 8];
         let data_u8 = PunSlice::<u8>::pun_slice(data);
         let data_u32 = PunSlice::<u32>::pun_slice(data);
 
@@ -421,12 +424,7 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
         let new_length = length + self.remainder as usize;
 
         if new_length < SC_BUF_SIZE {
-            unsafe {
-                bytes.as_ptr().copy_to_nonoverlapping(
-                    (self.data.as_mut_ptr() as *mut u8).add(self.remainder as usize),
-                    length,
-                );
-            }
+            self.data.as_bytes_mut()[self.remainder as usize..][..length].copy_from_slice(bytes);
             self.length += length;
             self.remainder = new_length as u8;
             return;
@@ -454,25 +452,20 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
 
         if self.remainder != 0 {
             let prefix: u8 = SC_BUF_SIZE as u8 - self.remainder;
-            unsafe {
-                bytes.as_ptr().copy_to_nonoverlapping(
-                    (self.data.as_mut_ptr() as *mut u8).add(self.remainder as usize),
-                    prefix as usize,
-                );
-            }
-            u.p64 = self.data.as_mut_ptr();
+            self.data.as_bytes_mut()[self.remainder as usize..][..prefix as usize]
+                .copy_from_slice(&bytes[..prefix as usize]);
+
             Self::mix(
-                unsafe { core::slice::from_raw_parts(u.p64, SC_NUM_VARS) }
+                self.data.as_u64s_mut()[..SC_NUM_VARS].try_into().unwrap(),
+                &mut h,
+            );
+            Self::mix(
+                self.data.as_u64s_mut()[SC_NUM_VARS..][..SC_NUM_VARS]
                     .try_into()
                     .unwrap(),
                 &mut h,
             );
-            Self::mix(
-                unsafe { core::slice::from_raw_parts(u.p64.add(SC_NUM_VARS), SC_NUM_VARS) }
-                    .try_into()
-                    .unwrap(),
-                &mut h,
-            );
+
             u.p8 = unsafe { bytes.as_ptr().add(prefix as usize) as *mut _ };
             length -= prefix as usize;
         } else {
@@ -494,7 +487,10 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
         } else {
             while unsafe { u.p64 } < end {
                 unsafe {
-                    u.p8.copy_to_nonoverlapping(self.data.as_mut_ptr() as *mut u8, SC_BLOCK_SIZE);
+                    u.p8.copy_to_nonoverlapping(
+                        self.data.as_bytes_mut().as_mut_ptr(),
+                        SC_BLOCK_SIZE,
+                    );
                 }
                 u.p64 = unsafe { u.p64.add(SC_NUM_VARS) };
             }
@@ -503,7 +499,7 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
         self.remainder = remainder;
         unsafe {
             (end as *const u8)
-                .copy_to_nonoverlapping(self.data.as_mut_ptr() as *mut u8, remainder as usize);
+                .copy_to_nonoverlapping(self.data.as_bytes_mut().as_mut_ptr(), remainder as usize);
         }
 
         self.state = h;
@@ -515,7 +511,7 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
             return self.short();
         }
 
-        let mut data = self.data.as_ptr();
+        let mut data = self.data.as_u64s().as_ptr();
         let mut remainder: u8 = self.remainder;
 
         let mut h = self.state;
