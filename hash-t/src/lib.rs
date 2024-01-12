@@ -771,17 +771,24 @@ pub mod internal {
     pub(crate) trait PunSlice<T> {
         type Output: ?Sized;
         fn pun_slice(&self) -> &Self::Output;
+        fn pun_slice_mut(&mut self) -> &mut Self::Output;
     }
 
     impl PunSlice<u64> for [u64] {
         type Output = [u64];
+
         fn pun_slice(&self) -> &Self::Output {
+            self
+        }
+
+        fn pun_slice_mut(&mut self) -> &mut Self::Output {
             self
         }
     }
 
     impl PunSlice<u32> for [u64] {
         type Output = [u32];
+
         fn pun_slice(&self) -> &Self::Output {
             let ptr = self.as_ptr();
             let len = self.len();
@@ -791,10 +798,21 @@ pub mod internal {
                 slice::from_raw_parts(ptr as *const _, len * 2)
             }
         }
+
+        fn pun_slice_mut(&mut self) -> &mut Self::Output {
+            let ptr = self.as_mut_ptr();
+            let len = self.len();
+            unsafe {
+                // # Safety
+                // The result has the same size as the input and a smaller alignment requirement.
+                slice::from_raw_parts_mut(ptr as *mut _, len * 2)
+            }
+        }
     }
 
     impl PunSlice<u16> for [u64] {
         type Output = [u16];
+
         fn pun_slice(&self) -> &Self::Output {
             let ptr = self.as_ptr();
             let len = self.len();
@@ -804,10 +822,21 @@ pub mod internal {
                 slice::from_raw_parts(ptr as *const _, len * 4)
             }
         }
+
+        fn pun_slice_mut(&mut self) -> &mut Self::Output {
+            let ptr = self.as_mut_ptr();
+            let len = self.len();
+            unsafe {
+                // # Safety
+                // The result has the same size as the input and a smaller alignment requirement.
+                slice::from_raw_parts_mut(ptr as *mut _, len * 4)
+            }
+        }
     }
 
     impl PunSlice<u8> for [u64] {
         type Output = [u8];
+
         fn pun_slice(&self) -> &Self::Output {
             let ptr = self.as_ptr();
             let len = self.len();
@@ -815,6 +844,16 @@ pub mod internal {
                 // # Safety
                 // The result has the same size as the input and a smaller alignment requirement.
                 slice::from_raw_parts(ptr as *const _, len * 8)
+            }
+        }
+
+        fn pun_slice_mut(&mut self) -> &mut Self::Output {
+            let ptr = self.as_mut_ptr();
+            let len = self.len();
+            unsafe {
+                // # Safety
+                // The result has the same size as the input and a smaller alignment requirement.
+                slice::from_raw_parts_mut(ptr as *mut _, len * 8)
             }
         }
     }
