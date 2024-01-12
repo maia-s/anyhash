@@ -11,6 +11,8 @@ nightly = []
 
 # optional integrations
 bnum = ["dep:bnum"]
+
+# required by some hashers
 bytemuck = ["dep:bytemuck"]
 
 # hashing algorithms
