@@ -411,7 +411,7 @@ impl<V: Version> Hasher<u64> for SpookyV<V> {
 
 impl<V: Version> Hasher<u128> for SpookyV<V> {
     #[inline]
-    fn write(&mut self, bytes: &[u8]) {
+    fn write(&mut self, mut bytes: &[u8]) {
         let mut length = bytes.len();
 
         union U {
@@ -466,25 +466,29 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
                 &mut h,
             );
 
-            u.p8 = unsafe { bytes.as_ptr().add(prefix as usize) as *mut _ };
+            bytes = &bytes[prefix as usize..];
+            u.p8 = bytes.as_ptr() as *mut _;
             length -= prefix as usize;
         } else {
             u.p8 = bytes.as_ptr() as *mut _;
         }
 
-        let end = unsafe { u.p64.add((length / SC_BLOCK_SIZE) * SC_NUM_VARS) };
-        let remainder = (length - (unsafe { (end as *const u8).offset_from(u.p8) as usize })) as u8;
-        if unsafe { u.i } & 7 == 0 {
-            while unsafe { u.p64 } < end {
-                Self::mix(
-                    unsafe { core::slice::from_raw_parts(u.p64, SC_NUM_VARS) }
-                        .try_into()
-                        .unwrap(),
-                    &mut h,
-                );
-                u.p64 = unsafe { u.p64.add(SC_NUM_VARS) };
+        let length_to_end_64 = (length / SC_BLOCK_SIZE) * SC_NUM_VARS;
+        let end = unsafe { u.p64.add(length_to_end_64) };
+        let remainder = (length - length_to_end_64 * 8) as u8;
+        if bytes.as_ptr().align_offset(8) == 0 {
+            let u64s = unsafe {
+                // # Safety
+                // bytes is aligned
+                core::slice::from_raw_parts(bytes.as_ptr() as *const u64, length_to_end_64)
+            };
+            for chunk in u64s.chunks(SC_NUM_VARS) {
+                Self::mix(chunk.try_into().unwrap(), &mut h);
             }
         } else {
+            assert!(false);
+            //self.data.as_bytes_mut()[..SC_NUM_VARS].copy_from_slice(&bytes[..SC_BLOCK_SIZE]);
+
             while unsafe { u.p64 } < end {
                 unsafe {
                     u.p8.copy_to_nonoverlapping(
