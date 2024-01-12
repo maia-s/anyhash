@@ -17,7 +17,7 @@ bnum = ["dep:bnum"]
 bytemuck = ["dep:bytemuck"]
 
 # hashing algorithms
-fnv1a = []
+fnv = []
 spooky = ["bytemuck"]
 xxh64 = ["bytemuck"]
 

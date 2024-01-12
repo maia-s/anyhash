@@ -1,6 +1,6 @@
-//! Hasher and collections using the Fnv1a hashing algorithm.
+//! Hasher and collections using the Fnv hashing algorithm.
 
-use core::ops::BitXorAssign;
+use core::{fmt::Debug, marker::PhantomData, ops::BitXorAssign};
 
 use crate::{
     impl_core_build_hasher, impl_core_hasher, BuildHasher, EndianIndependentAlgorithm, Hasher,
@@ -15,32 +15,37 @@ impl_core_hasher!(Fnv1a<u64>);
 /// [`BuildHasher`] implementation for the [`Fnv1a`] hasher.
 /// If you don't need support for using custom seeds, use the zero sized
 /// [`Fnv1aDefaultBuildHasher`] instead.
-#[derive(Clone, Debug)]
-pub struct Fnv1aBuildHasher<T>(T);
+pub type Fnv1aBuildHasher<T> = FnvBuildHasher<T, V1A>;
 
-impl<T: FnvConfig> Fnv1aBuildHasher<T> {
-    /// Create a [`BuildHasher`] for [`Fnv1a`] using the default seed.
+/// [`BuildHasher`] implementation for the [`Fnv`] hasher.
+/// If you don't need support for using custom seeds, use the zero sized
+/// [`FnvDefaultBuildHasher`] instead.
+#[derive(Clone, Debug)]
+pub struct FnvBuildHasher<T, V>(T, PhantomData<fn() -> V>);
+
+impl<T: Type, V: Version> FnvBuildHasher<T, V> {
+    /// Create a [`BuildHasher`] for [`Fnv`] using the default seed.
     #[inline]
     pub const fn new() -> Self {
-        Self(Fnv1a::<T>::OFFSET_BASIS)
+        Self::with_seed(Fnv1a::<T>::OFFSET_BASIS)
     }
 
-    /// Create a [`BuildHasher`] for [`Fnv1a`] with a custom seed.
+    /// Create a [`BuildHasher`] for [`Fnv`] with a custom seed.
     #[inline]
     pub const fn with_seed(seed: T) -> Self {
-        Self(seed)
+        Self(seed, PhantomData)
     }
 }
 
-impl<T: FnvConfig> Default for Fnv1aBuildHasher<T> {
+impl<T: Type, V: Version> Default for FnvBuildHasher<T, V> {
     #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: FnvConfig> BuildHasher<T> for Fnv1aBuildHasher<T> {
-    type Hasher = Fnv1a<T>;
+impl<T: Type, V: Version> BuildHasher<T> for FnvBuildHasher<T, V> {
+    type Hasher = Fnv<T, V>;
 
     #[inline]
     fn build_hasher(&self) -> Self::Hasher {
@@ -48,12 +53,15 @@ impl<T: FnvConfig> BuildHasher<T> for Fnv1aBuildHasher<T> {
     }
 }
 
-/// [`BuildHasher`] implementation for the [`Fnv1a`] hasher using the default seed (zero sized).
-#[derive(Clone, Debug, Default)]
-pub struct Fnv1aDefaultBuildHasher;
+/// [`BuildHasher`] implementation for the [`Fnv`] hasher using the default seed (zero sized).
+pub type Fnv1aDefaultBuildHasher = FnvDefaultBuildHasher<V1A>;
 
-impl<T: FnvConfig> BuildHasher<T> for Fnv1aDefaultBuildHasher {
-    type Hasher = Fnv1a<T>;
+/// [`BuildHasher`] implementation for the [`Fnv`] hasher using the default seed (zero sized).
+#[derive(Clone, Debug, Default)]
+pub struct FnvDefaultBuildHasher<V: Version>(PhantomData<fn() -> V>);
+
+impl<T: Type, V: Version> BuildHasher<T> for FnvDefaultBuildHasher<V> {
+    type Hasher = Fnv<T, V>;
 
     #[inline]
     fn build_hasher(&self) -> Self::Hasher {
@@ -99,7 +107,7 @@ pub type Fnv1a512 = Fnv1a<U512>;
 pub type Fnv1a1024 = Fnv1a<U1024>;
 
 /// Configuration trait for the Fnv1a hashers.
-pub trait FnvConfig: Copy + From<u8> + BitXorAssign {
+pub trait Type: Copy + From<u8> + BitXorAssign {
     /// Offset basis.
     const OFFSET_BASIS: Self;
 
@@ -110,7 +118,7 @@ pub trait FnvConfig: Copy + From<u8> + BitXorAssign {
     fn wrapping_mul(self, rhs: Self) -> Self;
 }
 
-impl FnvConfig for u32 {
+impl Type for u32 {
     const OFFSET_BASIS: Self = 0x811c9dc5;
     const PRIME: Self = 0x01000193;
 
@@ -120,7 +128,7 @@ impl FnvConfig for u32 {
     }
 }
 
-impl FnvConfig for u64 {
+impl Type for u64 {
     const OFFSET_BASIS: Self = 0xcbf29ce484222325;
     const PRIME: Self = 0x100000001b3;
 
@@ -130,7 +138,7 @@ impl FnvConfig for u64 {
     }
 }
 
-impl FnvConfig for u128 {
+impl Type for u128 {
     const OFFSET_BASIS: Self = 0x6c62272e07bb014262b821756295c58d;
     const PRIME: Self = 0x0000000001000000000000000000013b;
 
@@ -141,7 +149,7 @@ impl FnvConfig for u128 {
 }
 
 #[cfg(feature = "bnum")]
-impl FnvConfig for U256 {
+impl Type for U256 {
     const OFFSET_BASIS: Self = Self::from_digits([0x163, 0, 0x10000000000, 0]);
 
     const PRIME: Self = Self::from_digits([
@@ -158,7 +166,7 @@ impl FnvConfig for U256 {
 }
 
 #[cfg(feature = "bnum")]
-impl FnvConfig for U512 {
+impl Type for U512 {
     const OFFSET_BASIS: Self = Self::from_digits([0x157, 0, 0, 0, 0, 0x1000000, 0, 0]);
 
     const PRIME: Self = Self::from_digits([
@@ -178,7 +186,7 @@ impl FnvConfig for U512 {
 }
 
 #[cfg(feature = "bnum")]
-impl FnvConfig for U1024 {
+impl Type for U1024 {
     const OFFSET_BASIS: Self = Self::from_digits([
         0x18D,
         0,
@@ -222,11 +230,36 @@ impl FnvConfig for U1024 {
     }
 }
 
-/// Hasher using the Fnv1a algorithm.
-#[derive(Clone)]
-pub struct Fnv1a<T>(T);
+/// Fnv version configuration.
+pub trait Version: Clone + Debug + Default {
+    /// Whether to xor before multiply.
+    const XOR_BEFORE_MULTIPLY: bool;
+}
 
-impl<T: FnvConfig> Fnv1a<T> {
+/// Selector for Fnv1.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct V1;
+
+impl Version for V1 {
+    const XOR_BEFORE_MULTIPLY: bool = false;
+}
+
+/// Selector for Fnv1a.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct V1A;
+
+impl Version for V1A {
+    const XOR_BEFORE_MULTIPLY: bool = true;
+}
+
+/// Hasher using the Fnv1a algorithm.
+pub type Fnv1a<T> = Fnv<T, V1A>;
+
+#[derive(Clone)]
+/// Hasher using a variant of the Fnv algorithm.
+pub struct Fnv<T, V>(T, PhantomData<fn() -> V>);
+
+impl<T: Type, V: Version> Fnv<T, V> {
     const OFFSET_BASIS: T = T::OFFSET_BASIS;
     const PRIME: T = T::PRIME;
 
@@ -239,25 +272,30 @@ impl<T: FnvConfig> Fnv1a<T> {
     /// Create a new `Fnv1a` hasher with a custom seed.
     #[inline]
     pub const fn with_seed(seed: T) -> Self {
-        Self(seed)
+        Self(seed, PhantomData)
     }
 }
 
-impl<T: FnvConfig> EndianIndependentAlgorithm for Fnv1a<T> {}
+impl<T: Type, V: Version> EndianIndependentAlgorithm for Fnv<T, V> {}
 
-impl<T: FnvConfig> Default for Fnv1a<T> {
+impl<T: Type, V: Version> Default for Fnv<T, V> {
     #[inline]
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: FnvConfig> Hasher<T> for Fnv1a<T> {
+impl<T: Type, V: Version> Hasher<T> for Fnv<T, V> {
     #[inline]
     fn write(&mut self, bytes: &[u8]) {
         for &byte in bytes {
-            self.0 ^= byte.into();
-            self.0 = self.0.wrapping_mul(Self::PRIME);
+            if V::XOR_BEFORE_MULTIPLY {
+                self.0 ^= byte.into();
+                self.0 = self.0.wrapping_mul(Self::PRIME);
+            } else {
+                self.0 = self.0.wrapping_mul(Self::PRIME);
+                self.0 ^= byte.into();
+            }
         }
     }
 
@@ -269,29 +307,55 @@ impl<T: FnvConfig> Hasher<T> for Fnv1a<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::{BuildHasher, Hash};
+    use core::any::type_name;
 
-    fn default_seed<T: Hash<u64>>(x: T) -> u64 {
-        Fnv1aDefaultBuildHasher.hash_one(x)
+    use super::*;
+    use crate::{tests::RawBytes, BuildHasher, Hash};
+
+    #[test]
+    fn fnv0() {
+        fn test<T: Type + Debug + Eq + From<u8>>() {
+            let hash = FnvBuildHasher::<T, V1>::with_seed(0.into())
+                .hash_one(RawBytes(br"chongo <Landon Curt Noll> /\../\"));
+            assert_eq!(
+                hash,
+                T::OFFSET_BASIS,
+                "fnv0 test failed for {}",
+                type_name::<T>()
+            );
+        }
+        test::<u32>();
+        test::<u64>();
+        test::<u128>();
+
+        #[cfg(feature = "bnum")]
+        test::<U256>();
+        #[cfg(feature = "bnum")]
+        test::<U512>();
+        #[cfg(feature = "bnum")]
+        test::<U1024>();
     }
 
-    fn custom_seed<T: Hash<u64>>(x: T) -> u64 {
+    fn fnv1a_default_seed<T: Hash<u64>>(x: T) -> u64 {
+        Fnv1aDefaultBuildHasher::default().hash_one(x)
+    }
+
+    fn fnv1a_custom_seed<T: Hash<u64>>(x: T) -> u64 {
         Fnv1aBuildHasher::with_seed(0x55555555_55555555).hash_one(x)
     }
 
     #[test]
     fn empty_default_seed() {
-        assert_eq!(default_seed(()), 0xcbf29ce484222325);
+        assert_eq!(fnv1a_default_seed(()), 0xcbf29ce484222325);
     }
 
     #[test]
     fn empty_custom_seed() {
-        assert_eq!(custom_seed(()), 0x5555555555555555);
+        assert_eq!(fnv1a_custom_seed(()), 0x5555555555555555);
     }
 
     test_bytes_hash! {
-        [default_seed]
+        [fnv1a_default_seed]
         a: 0xaf63dc4c8601ec8c,
         ab: 0x89c4407b545986a,
         abc: 0xe71fa2190541574b,
@@ -329,7 +393,7 @@ mod tests {
         abcdefghijklmnopqrstuvwxyz012345678: 0x4b859d9ec24aeb06,
         abcdefghijklmnopqrstuvwxyz0123456789: 0x9ef613c4254dbc0d,
 
-        [custom_seed]
+        [fnv1a_custom_seed]
         a: 0x555533ffffffc75c,
         ab: 0xff8e99ffff9f8e5a,
         abc: 0xdedde6ff5c1eaadb,

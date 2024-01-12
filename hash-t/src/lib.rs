@@ -392,8 +392,8 @@ macro_rules! impl_hasher_core_fwd {
     };
 }
 
-#[cfg(feature = "fnv1a")]
-pub mod fnv1a;
+#[cfg(feature = "fnv")]
+pub mod fnv;
 
 #[cfg(feature = "spooky")]
 pub mod spooky;
