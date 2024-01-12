@@ -1,6 +1,6 @@
 //! Hasher and collections using the SpookyHash algorithm.
 
-// referenced from https://burtleburtle.net/bob/hash/spooky.html
+// based on the reference c++ implementation at https://burtleburtle.net/bob/hash/spooky.html
 
 macro_rules! fallthrough_jump_table {
     (switch ($expr:expr) {
@@ -413,14 +413,6 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
     #[inline]
     fn write(&mut self, mut bytes: &[u8]) {
         let mut length = bytes.len();
-
-        union U {
-            p8: *mut u8,
-            p64: *mut u64,
-            i: usize,
-        }
-        let mut u = U { i: 0 };
-
         let new_length = length + self.remainder as usize;
 
         if new_length < SC_BUF_SIZE {
@@ -467,14 +459,10 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
             );
 
             bytes = &bytes[prefix as usize..];
-            u.p8 = bytes.as_ptr() as *mut _;
             length -= prefix as usize;
-        } else {
-            u.p8 = bytes.as_ptr() as *mut _;
         }
 
         let length_to_end_64 = (length / SC_BLOCK_SIZE) * SC_NUM_VARS;
-        let end = unsafe { u.p64.add(length_to_end_64) };
         let remainder = (length - length_to_end_64 * 8) as u8;
 
         if bytes.as_ptr().align_offset(8) == 0 {
@@ -487,21 +475,21 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
                 Self::mix(chunk.try_into().unwrap(), &mut h);
             }
         } else {
-            while bytes.len() >= SC_BLOCK_SIZE {
-                self.data.as_bytes_mut()[..SC_BLOCK_SIZE].copy_from_slice(&bytes[..SC_BLOCK_SIZE]);
+            let mut offset = 0;
+            while bytes[offset..].len() >= SC_BLOCK_SIZE {
+                self.data.as_bytes_mut()[..SC_BLOCK_SIZE]
+                    .copy_from_slice(&bytes[offset..][..SC_BLOCK_SIZE]);
                 Self::mix(
                     self.data.as_u64s()[..SC_NUM_VARS].try_into().unwrap(),
                     &mut h,
                 );
-                bytes = &bytes[SC_BLOCK_SIZE..];
+                offset += SC_BLOCK_SIZE;
             }
         }
 
         self.remainder = remainder;
-        unsafe {
-            (end as *const u8)
-                .copy_to_nonoverlapping(self.data.as_bytes_mut().as_mut_ptr(), remainder as usize);
-        }
+        self.data.as_bytes_mut()[..remainder as usize]
+            .copy_from_slice(&bytes[length_to_end_64 * 8..]);
 
         self.state = h;
     }
