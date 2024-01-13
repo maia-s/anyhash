@@ -7,7 +7,7 @@ use crate::{
 };
 
 #[cfg(feature = "bnum")]
-use bnum::types::{U1024, U256, U512};
+use bnum::types::{U1024, U128, U256, U512};
 
 impl_core_build_hasher!(Fnv1aBuildHasher<u64>; Fnv1aDefaultBuildHasher);
 impl_core_hasher!(Fnv1a<u64>);
@@ -149,15 +149,25 @@ impl Type for u128 {
 }
 
 #[cfg(feature = "bnum")]
-impl Type for U256 {
-    const OFFSET_BASIS: Self = Self::from_digits([0x163, 0, 0x10000000000, 0]);
+impl Type for U128 {
+    const OFFSET_BASIS: Self = Self::from_digits([0x62b821756295c58d, 0x6c62272e07bb0142]);
+    const PRIME: Self = Self::from_digits([0x13b, 0x1000000]);
 
-    const PRIME: Self = Self::from_digits([
+    #[inline]
+    fn wrapping_mul(self, rhs: Self) -> Self {
+        self.wrapping_mul(rhs)
+    }
+}
+
+#[cfg(feature = "bnum")]
+impl Type for U256 {
+    const OFFSET_BASIS: Self = Self::from_digits([
         0x1023b4c8caee0535,
         0xc8b1536847b6bbb3,
         0x2d98c384c4e576cc,
         0xdd268dbcaac55036,
     ]);
+    const PRIME: Self = Self::from_digits([0x163, 0, 0x10000000000, 0]);
 
     #[inline]
     fn wrapping_mul(self, rhs: Self) -> Self {
@@ -167,9 +177,7 @@ impl Type for U256 {
 
 #[cfg(feature = "bnum")]
 impl Type for U512 {
-    const OFFSET_BASIS: Self = Self::from_digits([0x157, 0, 0, 0, 0, 0x1000000, 0, 0]);
-
-    const PRIME: Self = Self::from_digits([
+    const OFFSET_BASIS: Self = Self::from_digits([
         0xac982aac4afe9fd9,
         0x182036415f56e34b,
         0x2ea79bc942dbe7ce,
@@ -179,6 +187,7 @@ impl Type for U512 {
         0xdca1e50f309990ac,
         0xb86db0b1171f4416,
     ]);
+    const PRIME: Self = Self::from_digits([0x157, 0, 0, 0, 0, 0x1000000, 0, 0]);
 
     fn wrapping_mul(self, rhs: Self) -> Self {
         self.wrapping_mul(rhs)
@@ -188,25 +197,6 @@ impl Type for U512 {
 #[cfg(feature = "bnum")]
 impl Type for U1024 {
     const OFFSET_BASIS: Self = Self::from_digits([
-        0x18D,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0x10000000000,
-        0,
-        0,
-        0,
-        0,
-        0,
-    ]);
-
-    const PRIME: Self = Self::from_digits([
         0xaff4b16c71ee90b3,
         0x6bde8cc9c6a93b21,
         0x555f256cc005ae55,
@@ -223,6 +213,25 @@ impl Type for U1024 {
         0x32e56d5a591028b7,
         0x005f7a76758ecc4d,
         0x0000000000000000,
+    ]);
+
+    const PRIME: Self = Self::from_digits([
+        0x18D,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0x10000000000,
+        0,
+        0,
+        0,
+        0,
+        0,
     ]);
 
     fn wrapping_mul(self, rhs: Self) -> Self {
@@ -324,10 +333,13 @@ mod tests {
                 type_name::<T>()
             );
         }
+
         test::<u32>();
         test::<u64>();
         test::<u128>();
 
+        #[cfg(feature = "bnum")]
+        test::<U128>();
         #[cfg(feature = "bnum")]
         test::<U256>();
         #[cfg(feature = "bnum")]
@@ -345,12 +357,12 @@ mod tests {
     }
 
     #[test]
-    fn empty_default_seed() {
+    fn fnv1a_empty_default_seed() {
         assert_eq!(fnv1a_default_seed(()), 0xcbf29ce484222325);
     }
 
     #[test]
-    fn empty_custom_seed() {
+    fn fnv1a_empty_custom_seed() {
         assert_eq!(fnv1a_custom_seed(()), 0x5555555555555555);
     }
 
