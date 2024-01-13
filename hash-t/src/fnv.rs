@@ -278,13 +278,13 @@ impl<T: Type, V: Version> Fnv<T, V> {
     const OFFSET_BASIS: T = T::OFFSET_BASIS;
     const PRIME: T = T::PRIME;
 
-    /// Create a new `Fnv1a` hasher using the default seed.
+    /// Create a new `Fnv` hasher using the default seed.
     #[inline]
     pub const fn new() -> Self {
         Self::with_seed(Self::OFFSET_BASIS)
     }
 
-    /// Create a new `Fnv1a` hasher with a custom seed.
+    /// Create a new `Fnv` hasher with a custom seed.
     #[inline]
     pub const fn with_seed(seed: T) -> Self {
         Self(seed, PhantomData)
