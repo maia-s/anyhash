@@ -60,6 +60,13 @@ pub type Fnv1aDefaultBuildHasher = FnvDefaultBuildHasher<V1A>;
 #[derive(Clone, Debug, Default)]
 pub struct FnvDefaultBuildHasher<V: Version>(PhantomData<fn() -> V>);
 
+impl<V: Version> FnvDefaultBuildHasher<V> {
+    /// Create a [`BuildHasher`] for [`Fnv`] using the default seed.
+    pub const fn new() -> Self {
+        Self(PhantomData)
+    }
+}
+
 impl<T: Type, V: Version> BuildHasher<T> for FnvDefaultBuildHasher<V> {
     type Hasher = Fnv<T, V>;
 

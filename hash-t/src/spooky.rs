@@ -70,7 +70,7 @@ pub type SpookyBuildHasher = SpookyBuildHasherV<V2>;
 pub struct SpookyBuildHasherV<V: Version = V2>(u64, u64, PhantomData<fn() -> V>);
 
 impl<V: Version> SpookyBuildHasherV<V> {
-    /// Create a [`BuildHasher`] for [`Spooky`] with the default seed.
+    /// Create a [`BuildHasher`] for [`Spooky`] using the default seed.
     #[inline]
     pub const fn new() -> Self {
         Self::with_seed(0, 0)
@@ -122,6 +122,13 @@ pub type SpookyDefaultBuildHasher = SpookyDefaultBuildHasherV<V2>;
 /// [`BuildHasher`] implementation for the [`Spooky`] hasher using the default seed (zero sized).
 #[derive(Clone, Debug, Default)]
 pub struct SpookyDefaultBuildHasherV<V: Version = V2>(PhantomData<fn() -> V>);
+
+impl<V: Version> SpookyDefaultBuildHasherV<V> {
+    /// Create a [`BuildHasher`] for [`Spooky`] using the default seed.
+    pub const fn new() -> Self {
+        Self(PhantomData)
+    }
+}
 
 impl<V: Version> BuildHasher<u32> for SpookyDefaultBuildHasherV<V> {
     type Hasher = SpookyV<V>;

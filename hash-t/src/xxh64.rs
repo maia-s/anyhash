@@ -47,6 +47,13 @@ impl Default for Xxh64BuildHasher {
 #[derive(Clone, Debug, Default)]
 pub struct Xxh64DefaultBuildHasher;
 
+impl Xxh64DefaultBuildHasher {
+    /// Create a [`BuildHasher`] for [`Xxh64`] using the default seed.
+    pub const fn new() -> Self {
+        Self
+    }
+}
+
 impl BuildHasher<u64> for Xxh64DefaultBuildHasher {
     type Hasher = Xxh64;
 
