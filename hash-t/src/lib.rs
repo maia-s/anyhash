@@ -676,8 +676,6 @@ impl<T, BH: BuildHasher<T> + Default> Default for BuildHasherBe<T, BH> {
 pub mod internal {
     use core::marker::PhantomData;
 
-    use bytemuck::{cast_mut, cast_ref, Pod};
-
     use super::*;
 
     #[repr(transparent)]
@@ -737,92 +735,98 @@ pub mod internal {
         impl_hasher_core_fwd!(&mut);
     }
 
-    pub(crate) trait ConstValue: Copy + Default {
-        const VALUE: usize;
-        type ArrayU64: Pod + Default;
-        type Array2xU32: Pod;
-        type Array4xU16: Pod;
-        type Array8xU8: Pod;
-    }
+    #[cfg(feature = "bytemuck")]
+    pub(crate) use bm::*;
 
-    macro_rules! define_const_values {
-        ($($name:ident = $value:expr),* $(,)?) => { $(
-            #[derive(Clone, Copy, Default)]
-            pub(crate) struct $name;
+    #[cfg(feature = "bytemuck")]
+    pub(crate) mod bm {
+        use bytemuck::{cast_mut, cast_ref, Pod};
 
-            impl ConstValue for $name {
-                const VALUE: usize = $value;
-                type ArrayU64 = [u64; $value];
-                type Array2xU32 = [u32; 2 * $value];
-                type Array4xU16 = [u16; 4 * $value];
-                type Array8xU8 = [u8; 8 * $value];
-            }
+        pub(crate) trait ConstValue: Copy + Default {
+            const VALUE: usize;
+            type ArrayU64: Pod + Default;
+            type Array2xU32: Pod;
+            type Array4xU16: Pod;
+            type Array8xU8: Pod;
+        }
 
-            impl From<$name> for usize {
-                #[inline]
-                fn from(_: $name) -> Self {
-                    $name::VALUE
+        macro_rules! define_const_values {
+            ($($name:ident = $value:expr),* $(,)?) => { $(
+                #[derive(Clone, Copy, Default)]
+                pub(crate) struct $name;
+
+                impl ConstValue for $name {
+                    const VALUE: usize = $value;
+                    type ArrayU64 = [u64; $value];
+                    type Array2xU32 = [u32; 2 * $value];
+                    type Array4xU16 = [u16; 4 * $value];
+                    type Array8xU8 = [u8; 8 * $value];
                 }
+
+                impl From<$name> for usize {
+                    #[inline]
+                    fn from(_: $name) -> Self {
+                        $name::VALUE
+                    }
+                }
+            )* };
+        }
+
+        define_const_values! {
+            N4 = 4,
+            N24 = 24,
+        }
+
+        #[derive(Clone, Copy, Default)]
+        #[repr(transparent)]
+        pub(crate) struct Buffer<N: ConstValue>(N::ArrayU64);
+
+        #[allow(dead_code)]
+        impl<N: ConstValue> Buffer<N> {
+            #[inline]
+            pub fn new() -> Self {
+                Self(N::ArrayU64::default())
             }
-        )* };
-    }
 
-    define_const_values! {
-        N4 = 4,
-        N24 = 24,
-    }
+            #[inline]
+            pub fn as_bytes(&self) -> &N::Array8xU8 {
+                cast_ref(&self.0)
+            }
 
-    #[cfg(feature = "bytemuck")]
-    #[derive(Clone, Copy, Default)]
-    #[repr(transparent)]
-    pub(crate) struct Buffer<N: ConstValue>(N::ArrayU64);
+            #[inline]
+            pub fn as_bytes_mut(&mut self) -> &mut N::Array8xU8 {
+                cast_mut(&mut self.0)
+            }
 
-    #[cfg(feature = "bytemuck")]
-    #[allow(dead_code)]
-    impl<N: ConstValue> Buffer<N> {
-        #[inline]
-        pub fn new() -> Self {
-            Self(N::ArrayU64::default())
-        }
+            #[inline]
+            pub fn as_u16s(&self) -> &N::Array4xU16 {
+                cast_ref(&self.0)
+            }
 
-        #[inline]
-        pub fn as_bytes(&self) -> &N::Array8xU8 {
-            cast_ref(&self.0)
-        }
+            #[inline]
+            pub fn as_u16s_mut(&mut self) -> &mut N::Array4xU16 {
+                cast_mut(&mut self.0)
+            }
 
-        #[inline]
-        pub fn as_bytes_mut(&mut self) -> &mut N::Array8xU8 {
-            cast_mut(&mut self.0)
-        }
+            #[inline]
+            pub fn as_u32s(&self) -> &N::Array2xU32 {
+                cast_ref(&self.0)
+            }
 
-        #[inline]
-        pub fn as_u16s(&self) -> &N::Array4xU16 {
-            cast_ref(&self.0)
-        }
+            #[inline]
+            pub fn as_u32s_mut(&mut self) -> &mut N::Array2xU32 {
+                cast_mut(&mut self.0)
+            }
 
-        #[inline]
-        pub fn as_u16s_mut(&mut self) -> &mut N::Array4xU16 {
-            cast_mut(&mut self.0)
-        }
+            #[inline]
+            pub fn as_u64s(&self) -> &N::ArrayU64 {
+                &self.0
+            }
 
-        #[inline]
-        pub fn as_u32s(&self) -> &N::Array2xU32 {
-            cast_ref(&self.0)
-        }
-
-        #[inline]
-        pub fn as_u32s_mut(&mut self) -> &mut N::Array2xU32 {
-            cast_mut(&mut self.0)
-        }
-
-        #[inline]
-        pub fn as_u64s(&self) -> &N::ArrayU64 {
-            &self.0
-        }
-
-        #[inline]
-        pub fn as_u64s_mut(&mut self) -> &mut N::ArrayU64 {
-            &mut self.0
+            #[inline]
+            pub fn as_u64s_mut(&mut self) -> &mut N::ArrayU64 {
+                &mut self.0
+            }
         }
     }
 }

@@ -16,7 +16,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Run tests (stable)
+    - name: Run tests (stable, no features)
+      run: cargo test --release
+    - name: Run tests (stable, feature fnv)
+      run: cargo test --release --features fnv
+    - name: Run tests (stable, features fnv, bnum)
+      run: cargo test --release --features bnum,fnv
+    - name: Run tests (stable, feature spooky)
+      run: cargo test --release --features spooky
+    - name: Run tests (stable, feature xxh64)
+      run: cargo test --release --features xxh64
+    - name: Run tests (stable, all features except nightly)
       run: cargo test --release --features std,bnum,fnv,spooky,xxh64
-    - name: Run tests (nightly)
+    - name: Run tests (nightly, all features)
       run: rustup update nightly && cargo +nightly test --release --all-features
