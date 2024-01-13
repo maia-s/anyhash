@@ -564,3 +564,33 @@ mod std_impls {
         SystemTime;
     );
 }
+
+#[cfg(feature = "bnum")]
+mod bnum_impls {
+    use bnum::{BInt, BIntD16, BIntD32, BIntD8, BUint, BUintD16, BUintD32, BUintD8};
+
+    use super::*;
+
+    macro_rules! impl_buint {
+        ($($id:ident),*) => { $(
+            impl<T, const N: usize> Hash<T> for $id<N> {
+                fn hash<H: Hasher<T>>(&self, state: &mut H) {
+                    self.digits().hash(state)
+                }
+            }
+        )* };
+    }
+
+    macro_rules! impl_bint {
+        ($($id:ident),*) => { $(
+            impl<T, const N: usize> Hash<T> for $id<N> {
+                fn hash<H: Hasher<T>>(&self, state: &mut H) {
+                    self.to_bits().hash(state)
+                }
+            }
+        )* };
+    }
+
+    impl_buint!(BUint, BUintD8, BUintD16, BUintD32);
+    impl_bint!(BInt, BIntD8, BIntD16, BIntD32);
+}
