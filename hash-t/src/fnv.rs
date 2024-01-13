@@ -106,16 +106,28 @@ pub type Fnv1a512 = Fnv1a<U512>;
 /// Hasher using the Fnv1a 1024-bit algorithm.
 pub type Fnv1a1024 = Fnv1a<U1024>;
 
-/// Configuration trait for the Fnv1a hashers.
-pub trait Type: Copy + From<u8> + BitXorAssign {
-    /// Offset basis.
-    const OFFSET_BASIS: Self;
+use sealed::{Type, Version};
+mod sealed {
 
-    /// Prime.
-    const PRIME: Self;
+    use super::*;
 
-    /// Wrapping multiply.
-    fn wrapping_mul(self, rhs: Self) -> Self;
+    /// Configuration trait for the Fnv1a hashers.
+    pub trait Type: Copy + From<u8> + BitXorAssign {
+        /// Offset basis.
+        const OFFSET_BASIS: Self;
+
+        /// Prime.
+        const PRIME: Self;
+
+        /// Wrapping multiply.
+        fn wrapping_mul(self, rhs: Self) -> Self;
+    }
+
+    /// Fnv version configuration.
+    pub trait Version: Clone + Debug + Default {
+        /// Whether to xor before multiply.
+        const XOR_BEFORE_MULTIPLY: bool;
+    }
 }
 
 impl Type for u32 {
@@ -237,12 +249,6 @@ impl Type for U1024 {
     fn wrapping_mul(self, rhs: Self) -> Self {
         self.wrapping_mul(rhs)
     }
-}
-
-/// Fnv version configuration.
-pub trait Version: Clone + Debug + Default {
-    /// Whether to xor before multiply.
-    const XOR_BEFORE_MULTIPLY: bool;
 }
 
 /// Selector for Fnv1.

@@ -37,10 +37,13 @@ use crate::{BuildHasher, Hasher};
 impl_core_build_hasher!(impl<V: Version> SpookyBuildHasherV<V>);
 impl_core_hasher!(impl<V: Version> SpookyV<V>);
 
-/// Version trait for SpookyHash.
-pub trait Version: Clone + core::fmt::Debug + Default {
-    /// Version number
-    const VERSION: usize;
+use sealed::Version;
+mod sealed {
+    /// Version trait for SpookyHash.
+    pub trait Version: Clone + core::fmt::Debug + Default {
+        /// Version number
+        const VERSION: usize;
+    }
 }
 
 /// Selector for SpookyHash v1.
