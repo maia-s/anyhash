@@ -131,6 +131,7 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
         impl<#(#lti,)* #T #(,#tpi)* #(,#cpi)*> #hash_t<#T> for #ident<#(#ltt,)* #(#tpt,)* #(#cpt),*> #where_ #wc
             #( #types: #hash_t<#T> ),*
         {
+            #[inline]
             fn hash<H: #hasher_t<#T>>(&self, state: &mut H) {
                 #tokens
             }
@@ -258,6 +259,7 @@ pub fn impl_core_build_hasher(input: TokenStream1) -> TokenStream1 {
             {
                 type Hasher = #root::internal::WrapU64ForCore<<Self as #build_hasher_t::<u64>>::Hasher>;
 
+                #[inline]
                 fn build_hasher(&self) -> Self::Hasher {
                     Self::Hasher::new(<Self as #build_hasher_t::<u64>>::build_hasher(self))
                 }

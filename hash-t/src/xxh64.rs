@@ -19,11 +19,13 @@ pub struct Xxh64BuildHasher(u64);
 
 impl Xxh64BuildHasher {
     /// Create a [`BuildHasher`] for [`Xxh64`] using the default seed.
+    #[inline]
     pub const fn new() -> Self {
         Self(0)
     }
 
     /// Create a [`BuildHasher`] for [`Xxh64`] with a custom seed.
+    #[inline]
     pub const fn with_seed(seed: u64) -> Self {
         Self(seed)
     }
@@ -32,12 +34,14 @@ impl Xxh64BuildHasher {
 impl BuildHasher<u64> for Xxh64BuildHasher {
     type Hasher = Xxh64;
 
+    #[inline]
     fn build_hasher(&self) -> Self::Hasher {
         Self::Hasher::with_seed(self.0)
     }
 }
 
 impl Default for Xxh64BuildHasher {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }
@@ -49,6 +53,7 @@ pub struct Xxh64DefaultBuildHasher;
 
 impl Xxh64DefaultBuildHasher {
     /// Create a [`BuildHasher`] for [`Xxh64`] using the default seed.
+    #[inline]
     pub const fn new() -> Self {
         Self
     }
@@ -57,6 +62,7 @@ impl Xxh64DefaultBuildHasher {
 impl BuildHasher<u64> for Xxh64DefaultBuildHasher {
     type Hasher = Xxh64;
 
+    #[inline]
     fn build_hasher(&self) -> Self::Hasher {
         Self::Hasher::new()
     }
@@ -95,6 +101,7 @@ impl Xxh64 {
     const PRIME64_5: u64 = 0x27d4eb2f165667c5;
 
     /// Create a new `Xxh64` hasher using the default seed.
+    #[inline]
     pub fn new() -> Self {
         Self::with_seed(0)
     }
@@ -142,6 +149,7 @@ impl Xxh64 {
 impl EndianIndependentAlgorithm for Xxh64 {}
 
 impl Default for Xxh64 {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }

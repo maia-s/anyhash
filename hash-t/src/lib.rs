@@ -409,6 +409,7 @@ pub trait Hash<T> {
     fn hash<H: Hasher<T>>(&self, state: &mut H);
 
     /// Feeds a slice of this type into the given [`Hasher`].
+    #[inline]
     fn hash_slice<H: Hasher<T>>(data: &[Self], state: &mut H)
     where
         Self: Sized,
@@ -439,6 +440,7 @@ pub trait BuildHasher<T> {
     fn build_hasher(&self) -> Self::Hasher;
 
     /// Calculates the hash of a single value.
+    #[inline]
     fn hash_one<U: Hash<T>>(&self, x: U) -> T {
         let mut hasher = self.build_hasher();
         x.hash(&mut hasher);

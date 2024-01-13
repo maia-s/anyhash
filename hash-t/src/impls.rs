@@ -60,6 +60,7 @@ macro_rules! impl_hasher_deref {
 macro_rules! impl_empty_hash {
     ($($t:ty),* $(,)?) => { $(
         impl<T> Hash<T> for $t {
+            #[inline]
             fn hash<H: Hasher<T>>(&self, _: &mut H) {}
         }
     )* };
@@ -160,12 +161,14 @@ impl<T, U: ?Sized + Hash<T>> Hash<T> for &mut U {
 }
 
 impl<T, U: ?Sized> Hash<T> for *const U {
+    #[inline]
     fn hash<H: Hasher<T>>(&self, state: &mut H) {
         <Self as ::core::hash::Hash>::hash(self, &mut crate::internal::WrapCoreForT::new(state))
     }
 }
 
 impl<T, U: ?Sized> Hash<T> for *mut U {
+    #[inline]
     fn hash<H: Hasher<T>>(&self, state: &mut H) {
         <Self as ::core::hash::Hash>::hash(self, &mut crate::internal::WrapCoreForT::new(state))
     }

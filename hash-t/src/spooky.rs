@@ -125,6 +125,7 @@ pub struct SpookyDefaultBuildHasherV<V: Version = V2>(PhantomData<fn() -> V>);
 
 impl<V: Version> SpookyDefaultBuildHasherV<V> {
     /// Create a [`BuildHasher`] for [`Spooky`] using the default seed.
+    #[inline]
     pub const fn new() -> Self {
         Self(PhantomData)
     }

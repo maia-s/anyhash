@@ -62,6 +62,7 @@ pub struct FnvDefaultBuildHasher<V: Version>(PhantomData<fn() -> V>);
 
 impl<V: Version> FnvDefaultBuildHasher<V> {
     /// Create a [`BuildHasher`] for [`Fnv`] using the default seed.
+    #[inline]
     pub const fn new() -> Self {
         Self(PhantomData)
     }
@@ -208,6 +209,7 @@ impl Type for U512 {
     ]);
     const PRIME: Self = Self::from_digits([0x157, 0, 0, 0, 0, 0x1000000, 0, 0]);
 
+    #[inline]
     fn wrapping_mul(self, rhs: Self) -> Self {
         self.wrapping_mul(rhs)
     }
@@ -253,6 +255,7 @@ impl Type for U1024 {
         0,
     ]);
 
+    #[inline]
     fn wrapping_mul(self, rhs: Self) -> Self {
         self.wrapping_mul(rhs)
     }
