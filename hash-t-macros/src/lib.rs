@@ -187,20 +187,48 @@ pub fn impl_core_hasher(input: TokenStream1) -> TokenStream1 {
         mut where_clause,
     } in input.punctuated
     {
+        let mut body = quote! {
+            #[inline(always)]
+            fn finish(&self) -> u64 {
+                <Self as #hasher_t::<u64>>::finish(self)
+            }
+
+            #[inline(always)]
+            fn write(&mut self, bytes: &[u8]) {
+                <Self as #hasher_t::<u64>>::write(self, bytes)
+            }
+        };
+
+        for t in [
+            quote!(u8),
+            quote!(u16),
+            quote!(u32),
+            quote!(u64),
+            quote!(u128),
+            quote!(usize),
+            quote!(i8),
+            quote!(i16),
+            quote!(i32),
+            quote!(i64),
+            quote!(i128),
+            quote!(isize),
+        ] {
+            let wid = format_ident!("write_{t}");
+            quote! {
+                #[inline(always)]
+                fn #wid(&mut self, i: #t) {
+                    <Self as #hasher_t::<u64>>::#wid(self, i);
+                }
+            }
+            .to_tokens(&mut body);
+        }
+
         let where_ = fix_where(where_clause.as_mut());
         quote! {
             impl #impl_generics ::core::hash::Hasher for #ident #use_generics #where_ #where_clause
                 Self: #hasher_t<u64>,
             {
-                #[inline(always)]
-                fn finish(&self) -> u64 {
-                    <Self as #hasher_t::<u64>>::finish(self)
-                }
-
-                #[inline(always)]
-                fn write(&mut self, bytes: &[u8]) {
-                    <Self as #hasher_t::<u64>>::write(self, bytes)
-                }
+                #body
             }
         }
         .to_tokens(&mut output);
@@ -260,14 +288,13 @@ pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
     {
         let SplitGenerics {
             lti,
-            ltt,
+            ltt: _,
             tpi,
-            tpt,
+            tpt: _,
             cpi,
-            cpt,
-            wc,
+            cpt: _,
+            wc: _,
         } = split_generics(&impl_generics);
-        let (_, _, _, _) = (ltt, tpt, cpt, wc);
         let where_ = fix_where(where_clause.as_mut());
 
         quote! {
