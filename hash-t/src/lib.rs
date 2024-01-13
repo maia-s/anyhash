@@ -320,7 +320,7 @@ macro_rules! define_writes_for_hasher {
     };
 }
 
-#[cfg(test)]
+#[cfg(all(test, any(feature = "fnv", feature = "xxh64")))]
 macro_rules! test_bytes_hash {
     ($([$hashfn:ident] $($bs:ident: $hash:expr),* $(,)?)*) => { $(
         mod $hashfn {
