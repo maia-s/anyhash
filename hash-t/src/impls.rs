@@ -243,7 +243,6 @@ mod core_impls {
         fmt::Error,
         marker::{PhantomData, PhantomPinned},
         mem::{discriminant, transmute, Discriminant, ManuallyDrop},
-        net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
         num::{
             NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
             NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize, Saturating, Wrapping,
@@ -287,30 +286,6 @@ mod core_impls {
                 },
                 state,
             );
-        }
-    }
-
-    impl_hash_t!(SocketAddrV4; SocketAddrV6);
-
-    impl<T> Hash<T> for IpAddr {
-        #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            discriminant(self).hash(state);
-            match self {
-                IpAddr::V4(v4) => v4.hash(state),
-                IpAddr::V6(v6) => v6.hash(state),
-            }
-        }
-    }
-
-    impl<T> Hash<T> for SocketAddr {
-        #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            discriminant(self).hash(state);
-            match self {
-                SocketAddr::V4(v4) => v4.hash(state),
-                SocketAddr::V6(v6) => v6.hash(state),
-            }
         }
     }
 
@@ -414,9 +389,6 @@ mod core_impls {
         get {
             NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize,
             NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize,
-        }
-        octets {
-            Ipv4Addr, Ipv6Addr,
         }
         to_bytes_with_nul {
             CStr,
@@ -545,6 +517,7 @@ mod std_impls {
     use std::{
         ffi::{OsStr, OsString},
         fs::FileType,
+        net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
         path::{Component, Path, PathBuf, Prefix, PrefixComponent},
         thread::ThreadId,
         time::{Instant, SystemTime},
@@ -562,6 +535,12 @@ mod std_impls {
         ThreadId;
         Instant;
         SystemTime;
+        SocketAddr;
+        SocketAddrV4;
+        SocketAddrV6;
+        IpAddr;
+        Ipv4Addr;
+        Ipv6Addr;
     );
 }
 
