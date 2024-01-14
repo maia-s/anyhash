@@ -6,7 +6,7 @@ authors = ["Maia S. R."]
 license = "MIT OR Apache-2.0 OR Zlib"
 description = "Traits and utilities for making hashes of any type"
 repository = "https://github.com/maia-s/anyhash"
-keywords = ["hash", "hashing", "generic"]
+keywords = ["hash", "hashing", "generic", "endian", "endian-independent"]
 categories = ["algorithms", "no-std", "no-std::no-alloc"]
 
 [features]

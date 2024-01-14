@@ -182,6 +182,7 @@ pub use anyhash_macros::impl_core_hasher;
 pub use anyhash_macros::impl_core_build_hasher;
 
 /// Implement [`Hash`] for types that already implement `core::hash::Hash`.
+/// Only use this if you can't use the derive macro or implement `Hash` yourself.
 /// This will panic if `core::hash::Hasher::finish` is called during hashing.
 ///
 /// ```
