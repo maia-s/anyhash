@@ -17,7 +17,7 @@ use core::{any::type_name, fmt, fmt::Debug, marker::PhantomData};
 /// Derive macro for [`Hash`].
 pub use anyhash_macros::Hash;
 
-/// Implement `::core::Hash::Hash` for types that already implement [`Hash<u64>`].
+/// Implement `core::Hash::Hash` for types that already implement [`Hash`].
 ///
 /// ```
 /// # use anyhash::*;
@@ -54,7 +54,7 @@ pub use anyhash_macros::Hash;
 /// ```
 pub use anyhash_macros::impl_core_hash;
 
-/// Implement `::core::Hash::Hasher` for types that already implement [`Hasher<u64>`].
+/// Implement `core::Hash::Hasher` for types that already implement [`Hasher<u64>`].
 ///
 /// ```
 /// # use anyhash::*;
@@ -111,7 +111,7 @@ pub use anyhash_macros::impl_core_hash;
 /// ```
 pub use anyhash_macros::impl_core_hasher;
 
-/// Implement `::core::Hash::BuildHasher` for types that already implement [`BuildHasher<u64>`].
+/// Implement `core::Hash::BuildHasher` for types that already implement [`BuildHasher<u64>`].
 ///
 /// ```
 /// # use anyhash::*;
@@ -181,8 +181,8 @@ pub use anyhash_macros::impl_core_hasher;
 /// ```
 pub use anyhash_macros::impl_core_build_hasher;
 
-/// Implement [`Hash`] for types that already implement `::core::hash::Hash`.
-/// This will panic if `::core::hash::Hasher::finish` is called during hashing.
+/// Implement [`Hash`] for types that already implement `core::hash::Hash`.
+/// This will panic if `core::hash::Hasher::finish` is called during hashing.
 ///
 /// ```
 /// # use anyhash::*;
@@ -355,7 +355,7 @@ pub trait HasherWrite {
     define_writes_for_hasher!(native endian);
 }
 
-/// A trait for creating instances of [`Hasher`].
+/// A trait for creating instances of [`Hasher`] that make hashes of type `T`.
 pub trait BuildHasher<T> {
     /// Type of the hasher that will be created.
     type Hasher: Hasher<T>;

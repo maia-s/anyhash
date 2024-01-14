@@ -9,9 +9,9 @@ The [`Hash`] trait uses the [`HasherWrite`] trait for hashing, which has all the
 methods you're familiar with from `Hasher` in core except for the `finish` method,
 because [`Hash`] doesn't know the type of the hash.
 
-Hashing algorithms implement the [`Hasher`] trait. This is generic over the type of the
-hash and only contains the `finish` method. It depends on [`HasherWrite`], so you can
-use it just like `Hasher` from core.
+Hashing algorithms implement the [`Hasher`] and [`HasherWrite`] traits. [`Hasher`] is
+generic over the type of the hash and only contains the `finish` method. It depends on
+[`HasherWrite`], so you can use it just like `Hasher` from core.
 
 This crate also provides tools for working with endian independent hashes, and a few
 hasher implementations.
