@@ -1,4 +1,4 @@
-use crate::Hasher;
+use crate::{Hasher, HasherWrite};
 
 use core::marker::PhantomData;
 
@@ -92,7 +92,9 @@ impl<H: ::core::hash::Hasher> Hasher<u64> for WrapCoreForU64<'_, H> {
     fn finish(&self) -> u64 {
         H::finish(self.0)
     }
+}
 
+impl<H: ::core::hash::Hasher> HasherWrite for WrapCoreForU64<'_, H> {
     impl_hasher_core_fwd!();
 }
 

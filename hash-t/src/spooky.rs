@@ -30,6 +30,7 @@ use bytemuck::{cast_slice, cast_slice_mut};
 use crate::{
     impl_core_build_hasher, impl_core_hasher,
     internal::{Buffer, N24},
+    HasherWrite,
 };
 
 use crate::{BuildHasher, Hasher};
@@ -403,11 +404,6 @@ impl<V: Version> Hasher<u32> for SpookyV<V> {
     fn finish(&self) -> u32 {
         <Self as Hasher<u128>>::finish(self) as u32
     }
-
-    #[inline]
-    fn write(&mut self, bytes: &[u8]) {
-        <Self as Hasher<u128>>::write(self, bytes);
-    }
 }
 
 impl<V: Version> Hasher<u64> for SpookyV<V> {
@@ -415,14 +411,9 @@ impl<V: Version> Hasher<u64> for SpookyV<V> {
     fn finish(&self) -> u64 {
         <Self as Hasher<u128>>::finish(self) as u64
     }
-
-    #[inline]
-    fn write(&mut self, bytes: &[u8]) {
-        <Self as Hasher<u128>>::write(self, bytes);
-    }
 }
 
-impl<V: Version> Hasher<u128> for SpookyV<V> {
+impl<V: Version> HasherWrite for SpookyV<V> {
     #[inline]
     fn write(&mut self, mut bytes: &[u8]) {
         let mut length = bytes.len();
@@ -499,7 +490,9 @@ impl<V: Version> Hasher<u128> for SpookyV<V> {
 
         self.state = h;
     }
+}
 
+impl<V: Version> Hasher<u128> for SpookyV<V> {
     #[inline]
     fn finish(&self) -> u128 {
         if self.length < SC_BUF_SIZE {

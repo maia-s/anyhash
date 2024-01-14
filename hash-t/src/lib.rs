@@ -61,6 +61,8 @@ pub use hash_t_macros::impl_core_hash;
 /// # struct MyType;
 /// # impl Hasher<u64> for MyType {
 /// #   fn finish(&self) -> u64 { 0 }
+/// # }
+/// # impl HasherWrite for MyType {
 /// #   fn write(&mut self, _: &[u8]) {}
 /// # }
 /// // Implements `::core::Hash:Hasher` for `MyType`.
@@ -74,6 +76,8 @@ pub use hash_t_macros::impl_core_hash;
 /// # struct MyOtherType<T>(T);
 /// # impl<T> Hasher<u64> for MyOtherType<T> {
 /// #   fn finish(&self) -> u64 { 0 }
+/// # }
+/// # impl<T> HasherWrite for MyOtherType<T> {
 /// #   fn write(&mut self, _: &[u8]) {}
 /// # }
 /// // Implements `::core::Hash:Hasher` for `MyOtherType<u32>` and `MyOtherType<u64>`.
@@ -88,11 +92,15 @@ pub use hash_t_macros::impl_core_hash;
 /// # struct MyType<T>(T);
 /// # impl<T> Hasher<u64> for MyType<T> {
 /// #   fn finish(&self) -> u64 { 0 }
+/// # }
+/// # impl<T> HasherWrite for MyType<T> {
 /// #   fn write(&mut self, _: &[u8]) {}
 /// # }
 /// # struct MyOtherType<'a, T, U, V>(core::marker::PhantomData<&'a (T, U, V)>);
 /// # impl<'a, T, U, V> Hasher<u64> for MyOtherType<'a, T, U, V> {
 /// #   fn finish(&self) -> u64 { 0 }
+/// # }
+/// # impl<'a, T, U, V> HasherWrite for MyOtherType<'a, T, U, V> {
 /// #   fn write(&mut self, _: &[u8]) {}
 /// # }
 /// // Implements `::core::Hash:Hasher` for `MyType` and `MyOtherType`.
@@ -110,6 +118,8 @@ pub use hash_t_macros::impl_core_hasher;
 /// # struct H;
 /// # impl Hasher<u64> for H {
 /// #   fn finish(&self) -> u64 { 0 }
+/// # }
+/// # impl HasherWrite for H {
 /// #   fn write(&mut self, _: &[u8]) {}
 /// # }
 /// # struct MyType;
@@ -128,6 +138,8 @@ pub use hash_t_macros::impl_core_hasher;
 /// # struct H;
 /// # impl Hasher<u64> for H {
 /// #   fn finish(&self) -> u64 { 0 }
+/// # }
+/// # impl HasherWrite for H {
 /// #   fn write(&mut self, _: &[u8]) {}
 /// # }
 /// # struct MyOtherType<T>(T);
@@ -147,6 +159,8 @@ pub use hash_t_macros::impl_core_hasher;
 /// # struct H;
 /// # impl Hasher<u64> for H {
 /// #   fn finish(&self) -> u64 { 0 }
+/// # }
+/// # impl HasherWrite for H {
 /// #   fn write(&mut self, _: &[u8]) {}
 /// # }
 /// # struct MyType<T>(T);
@@ -367,10 +381,13 @@ pub trait Hash<T> {
 }
 
 /// A trait for hashing an arbitrary stream of bytes.
-pub trait Hasher<T> {
+pub trait Hasher<T>: HasherWrite {
     /// Returns the hash value for the values written so far.
     fn finish(&self) -> T;
+}
 
+/// A trait for writing data to a hasher.
+pub trait HasherWrite {
     /// Writes some data into this hasher.
     fn write(&mut self, bytes: &[u8]);
 
@@ -445,7 +462,9 @@ impl<T, H: Hasher<T>> Hasher<T> for HasherLe<T, H> {
     fn finish(&self) -> T {
         self.0.finish()
     }
+}
 
+impl<T, H: Hasher<T>> HasherWrite for HasherLe<T, H> {
     #[inline]
     fn write(&mut self, bytes: &[u8]) {
         self.0.write(bytes);
@@ -502,7 +521,9 @@ impl<T, H: Hasher<T>> Hasher<T> for HasherBe<T, H> {
     fn finish(&self) -> T {
         self.0.finish()
     }
+}
 
+impl<T, H: Hasher<T>> HasherWrite for HasherBe<T, H> {
     #[inline]
     fn write(&mut self, bytes: &[u8]) {
         self.0.write(bytes);

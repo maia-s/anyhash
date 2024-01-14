@@ -5,7 +5,7 @@
 use crate::{
     impl_core_build_hasher, impl_core_hasher,
     internal::{Buffer, N4},
-    BuildHasher, EndianIndependentAlgorithm, Hasher,
+    BuildHasher, EndianIndependentAlgorithm, Hasher, HasherWrite,
 };
 
 impl_core_build_hasher!(Xxh64BuildHasher; Xxh64DefaultBuildHasher);
@@ -155,7 +155,7 @@ impl Default for Xxh64 {
     }
 }
 
-impl Hasher<u64> for Xxh64 {
+impl HasherWrite for Xxh64 {
     fn write(&mut self, mut bytes: &[u8]) {
         self.total_len += bytes.len() as u64;
         while !bytes.is_empty() {
@@ -167,7 +167,9 @@ impl Hasher<u64> for Xxh64 {
             }
         }
     }
+}
 
+impl Hasher<u64> for Xxh64 {
     fn finish(&self) -> u64 {
         let acc = if self.total_len < 32 {
             // acc[2] contains the original seed, because the buffer wasn't filled

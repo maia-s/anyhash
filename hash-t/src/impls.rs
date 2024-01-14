@@ -1,4 +1,13 @@
-use crate::{impl_hash_t, Hash, Hasher};
+use crate::{impl_hash_t, Hash, Hasher, HasherWrite};
+
+macro_rules! impl_hasher_t_deref {
+    () => {
+        #[inline]
+        fn finish(&self) -> T {
+            (**self).finish()
+        }
+    };
+}
 
 macro_rules! impl_hasher_deref_writes {
     ($($t:ty: $fn:ident),* $(,)?) => { $(
@@ -11,11 +20,6 @@ macro_rules! impl_hasher_deref_writes {
 
 macro_rules! impl_hasher_deref {
     () => {
-        #[inline]
-        fn finish(&self) -> T {
-            (**self).finish()
-        }
-
         #[inline]
         fn write(&mut self, bytes: &[u8]) {
             (**self).write(bytes)
@@ -93,6 +97,10 @@ macro_rules! impl_hash_from_field {
 }
 
 impl<T, H: Hasher<T> + ?Sized> Hasher<T> for &mut H {
+    impl_hasher_t_deref!();
+}
+
+impl<H: HasherWrite + ?Sized> HasherWrite for &mut H {
     impl_hasher_deref!();
 }
 
@@ -440,6 +448,10 @@ mod alloc_impls {
     }
 
     impl<T, U: ?Sized + Hasher<T>> Hasher<T> for Box<U> {
+        impl_hasher_t_deref!();
+    }
+
+    impl<U: ?Sized + HasherWrite> HasherWrite for Box<U> {
         impl_hasher_deref!();
     }
 

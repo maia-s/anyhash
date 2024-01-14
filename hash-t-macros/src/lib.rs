@@ -177,6 +177,7 @@ pub fn impl_core_hash(input: TokenStream1) -> TokenStream1 {
 pub fn impl_core_hasher(input: TokenStream1) -> TokenStream1 {
     let root = crate_root();
     let hasher_t = quote!(#root::Hasher);
+    let hasher_write = quote!(#root::HasherWrite);
 
     let input = parse_macro_input!(input as IdentsWithGenerics);
     let mut output = TokenStream::new();
@@ -196,7 +197,7 @@ pub fn impl_core_hasher(input: TokenStream1) -> TokenStream1 {
 
             #[inline(always)]
             fn write(&mut self, bytes: &[u8]) {
-                <Self as #hasher_t::<u64>>::write(self, bytes)
+                <Self as #hasher_write>::write(self, bytes)
             }
         };
 
@@ -218,7 +219,7 @@ pub fn impl_core_hasher(input: TokenStream1) -> TokenStream1 {
             quote! {
                 #[inline(always)]
                 fn #wid(&mut self, i: #t) {
-                    <Self as #hasher_t::<u64>>::#wid(self, i);
+                    <Self as #hasher_write>::#wid(self, i);
                 }
             }
             .to_tokens(&mut body);

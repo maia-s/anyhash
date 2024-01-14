@@ -4,6 +4,7 @@ use core::{fmt::Debug, marker::PhantomData, ops::BitXorAssign};
 
 use crate::{
     impl_core_build_hasher, impl_core_hasher, BuildHasher, EndianIndependentAlgorithm, Hasher,
+    HasherWrite,
 };
 
 #[cfg(feature = "bnum")]
@@ -310,7 +311,7 @@ impl<T: Type, V: Version> Default for Fnv<T, V> {
     }
 }
 
-impl<T: Type, V: Version> Hasher<T> for Fnv<T, V> {
+impl<T: Type, V: Version> HasherWrite for Fnv<T, V> {
     #[inline]
     fn write(&mut self, bytes: &[u8]) {
         for &byte in bytes {
@@ -323,7 +324,9 @@ impl<T: Type, V: Version> Hasher<T> for Fnv<T, V> {
             }
         }
     }
+}
 
+impl<T: Type, V: Version> Hasher<T> for Fnv<T, V> {
     #[inline]
     fn finish(&self) -> T {
         self.0
