@@ -3,7 +3,7 @@ use crate::{impl_hash, Hash, Hasher, HasherWrite};
 macro_rules! impl_hasher_t_deref {
     () => {
         #[inline]
-        fn finish(&self) -> HT {
+        fn finish(&self) -> T {
             (**self).finish()
         }
     };
@@ -94,11 +94,11 @@ macro_rules! impl_hash_from_field {
     )*)* };
 }
 
-impl<HT, H: Hasher<HT> + ?Sized> Hasher<HT> for &mut H {
+impl<T, H: ?Sized + Hasher<T>> Hasher<T> for &mut H {
     impl_hasher_t_deref!();
 }
 
-impl<H: HasherWrite + ?Sized> HasherWrite for &mut H {
+impl<H: ?Sized + HasherWrite> HasherWrite for &mut H {
     impl_hasher_deref!();
 }
 
@@ -449,7 +449,7 @@ mod alloc_impls {
         }
     }
 
-    impl<HT, T: ?Sized + Hasher<HT>> Hasher<HT> for Box<T> {
+    impl<T, H: ?Sized + Hasher<T>> Hasher<T> for Box<H> {
         impl_hasher_t_deref!();
     }
 
