@@ -213,8 +213,8 @@ pub use anyhash_macros::impl_core_build_hasher;
 /// # struct MyOtherType<'a, T, U, V>(core::marker::PhantomData<&'a (T, U, V)>);
 /// // Implements `Hash` for `MyType` and `MyOtherType`.
 /// impl_hash! {
-///     impl<T> MyType<T>;
-///     impl<'a, T, U: 'a> MyOtherType<'a, T, u32, U> where Self: Display;
+///     impl<T: core::hash::Hash> MyType<T>;
+///     impl<'a, T: core::hash::Hash, U: 'a + core::hash::Hash> MyOtherType<'a, T, u32, U> where Self: Display;
 /// }
 /// ```
 pub use anyhash_macros::impl_hash;

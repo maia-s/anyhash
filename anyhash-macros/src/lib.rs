@@ -301,9 +301,7 @@ pub fn impl_hash(input: TokenStream1) -> TokenStream1 {
         let where_ = fix_where(where_clause.as_mut());
 
         quote! {
-            impl<#(#lti,)* #(#tpi,)* #(#cpi,)*> #hash for #ident #use_generics #where_ #where_clause
-                Self: ::core::hash::Hash,
-            {
+            impl<#(#lti,)* #(#tpi,)* #(#cpi,)*> #hash for #ident #use_generics #where_ #where_clause {
                 #[inline]
                 fn hash<H: #hasher_write>(&self, state: &mut H) {
                     <Self as ::core::hash::Hash>::hash(
