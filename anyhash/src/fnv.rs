@@ -10,17 +10,17 @@ use crate::{
 #[cfg(feature = "bnum")]
 use bnum::types::{U1024, U128, U256, U512};
 
-impl_core_build_hasher!(Fnv1aBuildHasher<u64>; Fnv1aDefaultBuildHasher);
+impl_core_build_hasher!(Fnv1aBuildHasher<u64>; Fnv1aBuildHasherDefault);
 impl_core_hasher!(Fnv1a<u64>);
 
 /// [`BuildHasher`] implementation for the [`Fnv1a`] hasher.
 /// If you don't need support for using custom seeds, use the zero sized
-/// [`Fnv1aDefaultBuildHasher`] instead.
+/// [`Fnv1aBuildHasherDefault`] instead.
 pub type Fnv1aBuildHasher<T> = FnvBuildHasher<T, V1A>;
 
 /// [`BuildHasher`] implementation for the [`Fnv`] hasher.
 /// If you don't need support for using custom seeds, use the zero sized
-/// [`FnvDefaultBuildHasher`] instead.
+/// [`FnvBuildHasherDefault`] instead.
 #[derive(Clone, Debug)]
 pub struct FnvBuildHasher<T, V>(T, PhantomData<fn() -> V>);
 
@@ -54,22 +54,22 @@ impl<T: Type, V: Version> BuildHasher<T> for FnvBuildHasher<T, V> {
     }
 }
 
-/// [`BuildHasher`] implementation for the [`Fnv`] hasher using the default seed (zero sized).
-pub type Fnv1aDefaultBuildHasher = FnvDefaultBuildHasher<V1A>;
+/// [`BuildHasher`] implementation for the [`Fnv1a`] hasher using the default seed (zero sized).
+pub type Fnv1aBuildHasherDefault = FnvBuildHasherDefault<V1A>;
 
 /// [`BuildHasher`] implementation for the [`Fnv`] hasher using the default seed (zero sized).
 #[derive(Clone, Debug, Default)]
-pub struct FnvDefaultBuildHasher<V: Version>(PhantomData<fn() -> V>);
+pub struct FnvBuildHasherDefault<V: Version>(PhantomData<fn() -> V>);
 
-impl<V: Version> FnvDefaultBuildHasher<V> {
-    /// Create a [`BuildHasher`] for [`Fnv`] using the default seed.
+impl<V: Version> FnvBuildHasherDefault<V> {
+    /// Create a new `BuildHasherDefault`.
     #[inline]
     pub const fn new() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<T: Type, V: Version> BuildHasher<T> for FnvDefaultBuildHasher<V> {
+impl<T: Type, V: Version> BuildHasher<T> for FnvBuildHasherDefault<V> {
     type Hasher = Fnv<T, V>;
 
     #[inline]
@@ -84,7 +84,7 @@ pub type Fnv1aHashMap<K, V> = std::collections::HashMap<K, V, Fnv1aBuildHasher<u
 
 #[cfg(feature = "std")]
 /// `HashMap` from `std` configured to use the [`Fnv1a64`] hasher with the default seed.
-pub type Fnv1aDefaultHashMap<K, V> = std::collections::HashMap<K, V, Fnv1aDefaultBuildHasher>;
+pub type Fnv1aHashMapDefault<K, V> = std::collections::HashMap<K, V, Fnv1aBuildHasherDefault>;
 
 #[cfg(feature = "std")]
 /// `HashSet` from `std` configured to use the [`Fnv1a64`] hasher.
@@ -92,7 +92,7 @@ pub type Fnv1aHashSet<T> = std::collections::HashSet<T, Fnv1aBuildHasher<u64>>;
 
 #[cfg(feature = "std")]
 /// `HashSet` from `std` configured to use the [`Fnv1a64`] hasher with the default seed.
-pub type Fnv1aDefaultHashSet<T> = std::collections::HashSet<T, Fnv1aDefaultBuildHasher>;
+pub type Fnv1aHashSetDefault<T> = std::collections::HashSet<T, Fnv1aBuildHasherDefault>;
 
 /// Hasher using the Fnv1a 32-bit algorithm.
 pub type Fnv1a32 = Fnv1a<u32>;
@@ -368,7 +368,7 @@ mod tests {
     }
 
     fn fnv1a_default_seed<T: Hash>(x: T) -> u64 {
-        Fnv1aDefaultBuildHasher::default().hash_one(x)
+        Fnv1aBuildHasherDefault::default().hash_one(x)
     }
 
     fn fnv1a_custom_seed<T: Hash>(x: T) -> u64 {

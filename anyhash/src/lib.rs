@@ -12,6 +12,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
+use core::any::type_name;
 use core::{fmt::Debug, marker::PhantomData};
 
 /// Derive macro for [`Hash`].
@@ -369,6 +370,47 @@ pub trait BuildHasher<T> {
         let mut hasher = self.build_hasher();
         x.hash(&mut hasher);
         hasher.finish()
+    }
+}
+
+/// Used to create a default [`BuildHasher`] instance for types that implement [`Hasher`]
+/// and Default.
+pub struct BuildHasherDefault<H>(PhantomData<fn() -> H>);
+
+impl<H> BuildHasherDefault<H> {
+    /// Create a new `BuildHasherDefault`.
+    pub const fn new() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<T, H: Hasher<T> + Default> BuildHasher<T> for BuildHasherDefault<H> {
+    type Hasher = H;
+
+    #[inline]
+    fn build_hasher(&self) -> Self::Hasher {
+        Self::Hasher::default()
+    }
+}
+
+impl<H> Clone for BuildHasherDefault<H> {
+    #[inline]
+    fn clone(&self) -> Self {
+        Self::new()
+    }
+}
+
+impl<H> Default for BuildHasherDefault<H> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<H> Debug for BuildHasherDefault<H> {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "BuildHasherDefault<{}>", core::any::type_name::<H>())
     }
 }
 
