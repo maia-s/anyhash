@@ -2,6 +2,14 @@
 
 // based on the reference c++ implementation at https://burtleburtle.net/bob/hash/spooky.html
 
+use crate::{
+    impl_core_build_hasher, impl_core_hasher,
+    internal::{Buffer, N24},
+    BuildHasher, Hasher, HasherWrite,
+};
+use bytemuck::{cast_slice, cast_slice_mut};
+use core::marker::PhantomData;
+
 macro_rules! fallthrough_jump_table {
     (switch ($expr:expr) {
         $( $label:lifetime: $pat:pat => $body:expr )*
@@ -22,18 +30,6 @@ macro_rules! fallthrough_jump_table {
         $label: $build
     };
 }
-
-use core::marker::PhantomData;
-
-use bytemuck::{cast_slice, cast_slice_mut};
-
-use crate::{
-    impl_core_build_hasher, impl_core_hasher,
-    internal::{Buffer, N24},
-    HasherWrite,
-};
-
-use crate::{BuildHasher, Hasher};
 
 impl_core_build_hasher!(impl<V: Version> SpookyVBuildHasher<V>);
 impl_core_hasher!(impl<V: Version> SpookyV<V>);

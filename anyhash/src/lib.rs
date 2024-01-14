@@ -12,8 +12,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
-use core::any::type_name;
-use core::{fmt::Debug, marker::PhantomData};
+use core::{any::type_name, fmt, fmt::Debug, marker::PhantomData};
 
 /// Derive macro for [`Hash`].
 pub use anyhash_macros::Hash;
@@ -409,8 +408,8 @@ impl<H> Default for BuildHasherDefault<H> {
 
 impl<H> Debug for BuildHasherDefault<H> {
     #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "BuildHasherDefault<{}>", core::any::type_name::<H>())
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "BuildHasherDefault<{}>", type_name::<H>())
     }
 }
 
@@ -478,7 +477,7 @@ impl<T, H: Hasher<T>> HasherWrite for HasherLe<T, H> {
 
 impl<T, H: Hasher<T> + Debug> Debug for HasherLe<T, H> {
     #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Debug::fmt(&self.0, f)
     }
 }
@@ -537,7 +536,7 @@ impl<T, H: Hasher<T>> HasherWrite for HasherBe<T, H> {
 
 impl<T, H: Hasher<T> + Debug> Debug for HasherBe<T, H> {
     #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Debug::fmt(&self.0, f)
     }
 }
@@ -580,7 +579,7 @@ impl<T, BH: BuildHasher<T>> BuildHasher<T> for BuildHasherLe<T, BH> {
 
 impl<T, BH: BuildHasher<T> + Debug> Debug for BuildHasherLe<T, BH> {
     #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Debug::fmt(&self.0, f)
     }
 }
@@ -623,7 +622,7 @@ impl<T, BH: BuildHasher<T>> BuildHasher<T> for BuildHasherBe<T, BH> {
 
 impl<T, BH: BuildHasher<T> + Debug> Debug for BuildHasherBe<T, BH> {
     #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Debug::fmt(&self.0, f)
     }
 }
