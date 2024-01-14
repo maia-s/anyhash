@@ -556,19 +556,19 @@ impl<T, H: Hasher<T> + Default> Default for HasherBe<T, H> {
 }
 
 /// `BuildHasher` for making [`HasherLe`] hashers.
-pub struct BuildHasherLe<T, BH: BuildHasher<T>>(BH, PhantomData<fn() -> T>);
+pub struct HasherLeBuildHasher<BH>(BH);
 
-impl_core_build_hasher!(impl<T, BH: BuildHasher<T>> BuildHasherLe<T, BH>);
+impl_core_build_hasher!(impl<BH> HasherLeBuildHasher<BH>);
 
-impl<T, BH: BuildHasher<T>> BuildHasherLe<T, BH> {
-    /// Create a new `BuildHasherLe`.
+impl<BH> HasherLeBuildHasher<BH> {
+    /// Create a new `HasherLeBuildHasher`.
     #[inline]
     pub const fn new(build_hasher: BH) -> Self {
-        Self(build_hasher, PhantomData)
+        Self(build_hasher)
     }
 }
 
-impl<T, BH: BuildHasher<T>> BuildHasher<T> for BuildHasherLe<T, BH> {
+impl<T, BH: BuildHasher<T>> BuildHasher<T> for HasherLeBuildHasher<BH> {
     type Hasher = HasherLe<T, BH::Hasher>;
 
     #[inline]
@@ -577,21 +577,21 @@ impl<T, BH: BuildHasher<T>> BuildHasher<T> for BuildHasherLe<T, BH> {
     }
 }
 
-impl<T, BH: BuildHasher<T> + Debug> Debug for BuildHasherLe<T, BH> {
+impl<BH: Debug> Debug for HasherLeBuildHasher<BH> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Debug::fmt(&self.0, f)
     }
 }
 
-impl<T, BH: BuildHasher<T> + Clone> Clone for BuildHasherLe<T, BH> {
+impl<BH: Clone> Clone for HasherLeBuildHasher<BH> {
     #[inline]
     fn clone(&self) -> Self {
         Self::new(self.0.clone())
     }
 }
 
-impl<T, BH: BuildHasher<T> + Default> Default for BuildHasherLe<T, BH> {
+impl<BH: Default> Default for HasherLeBuildHasher<BH> {
     #[inline]
     fn default() -> Self {
         Self::new(BH::default())
@@ -599,19 +599,19 @@ impl<T, BH: BuildHasher<T> + Default> Default for BuildHasherLe<T, BH> {
 }
 
 /// `BuildHasher` for making [`HasherBe`] hashers.
-pub struct BuildHasherBe<T, BH: BuildHasher<T>>(BH, PhantomData<fn() -> T>);
+pub struct HasherBeBuildHasher<BH>(BH);
 
-impl_core_build_hasher!(impl<T, BH: BuildHasher<T>> BuildHasherBe<T, BH>);
+impl_core_build_hasher!(impl<BH> HasherBeBuildHasher<BH>);
 
-impl<T, BH: BuildHasher<T>> BuildHasherBe<T, BH> {
-    /// Create a new `BuildHasherBe`.
+impl<BH> HasherBeBuildHasher<BH> {
+    /// Create a new `HasherBeBuildHasher`.
     #[inline]
     pub const fn new(build_hasher: BH) -> Self {
-        Self(build_hasher, PhantomData)
+        Self(build_hasher)
     }
 }
 
-impl<T, BH: BuildHasher<T>> BuildHasher<T> for BuildHasherBe<T, BH> {
+impl<T, BH: BuildHasher<T>> BuildHasher<T> for HasherBeBuildHasher<BH> {
     type Hasher = HasherBe<T, BH::Hasher>;
 
     #[inline]
@@ -620,21 +620,21 @@ impl<T, BH: BuildHasher<T>> BuildHasher<T> for BuildHasherBe<T, BH> {
     }
 }
 
-impl<T, BH: BuildHasher<T> + Debug> Debug for BuildHasherBe<T, BH> {
+impl<BH: Debug> Debug for HasherBeBuildHasher<BH> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Debug::fmt(&self.0, f)
     }
 }
 
-impl<T, BH: BuildHasher<T> + Clone> Clone for BuildHasherBe<T, BH> {
+impl<BH: Clone> Clone for HasherBeBuildHasher<BH> {
     #[inline]
     fn clone(&self) -> Self {
         Self::new(self.0.clone())
     }
 }
 
-impl<T, BH: BuildHasher<T> + Default> Default for BuildHasherBe<T, BH> {
+impl<BH: Default> Default for HasherBeBuildHasher<BH> {
     #[inline]
     fn default() -> Self {
         Self::new(BH::default())
