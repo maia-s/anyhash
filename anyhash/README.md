@@ -1,4 +1,4 @@
-# Generic traits and tools for hashing
+# Traits and utilities for making hashes of any type
 
 This crate provides the [`Hash`], [`Hasher`] and [`BuildHasher`] traits, which are almost
 exactly like their counterparts in `core`/`std`, except that [`Hasher`] and [`BuildHasher`]
