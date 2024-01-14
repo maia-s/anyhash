@@ -12,12 +12,12 @@ use syn::{
 };
 
 fn crate_root() -> TokenStream {
-    quote!(::hash_t)
+    quote!(::anyhash)
 }
 
-#[proc_macro_derive(HashT)]
+#[proc_macro_derive(Hash)]
 #[allow(non_snake_case)]
-pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
+pub fn derive_anyhash(input: TokenStream1) -> TokenStream1 {
     let root = crate_root();
     let hash = quote!(#root::Hash);
     let hasher_write = quote!(#root::HasherWrite);
@@ -164,7 +164,7 @@ pub fn impl_core_hash(input: TokenStream1) -> TokenStream1 {
                 #[inline]
                 fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
                     <Self as #hash>::hash(
-                        self, &mut #root::internal::WrapCoreForU64::new(state)
+                        self, &mut #root::internal::WrapCoreForHasherU64::new(state)
                     )
                 }
             }
@@ -259,7 +259,7 @@ pub fn impl_core_build_hasher(input: TokenStream1) -> TokenStream1 {
             impl #impl_generics ::core::hash::BuildHasher for #ident #use_generics #where_ #where_clause
                 Self: #build_hasher_t<u64>,
             {
-                type Hasher = #root::internal::WrapU64ForCore<<Self as #build_hasher_t::<u64>>::Hasher>;
+                type Hasher = #root::internal::WrapHasherU64ForCore<<Self as #build_hasher_t::<u64>>::Hasher>;
 
                 #[inline]
                 fn build_hasher(&self) -> Self::Hasher {
@@ -274,7 +274,7 @@ pub fn impl_core_build_hasher(input: TokenStream1) -> TokenStream1 {
 
 #[proc_macro]
 #[allow(non_snake_case)]
-pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
+pub fn impl_hash(input: TokenStream1) -> TokenStream1 {
     let root = crate_root();
     let hash = quote!(#root::Hash);
     let hasher_write = quote!(#root::HasherWrite);
@@ -307,41 +307,7 @@ pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
                 #[inline]
                 fn hash<H: #hasher_write>(&self, state: &mut H) {
                     <Self as ::core::hash::Hash>::hash(
-                        self, &mut #root::internal::WrapCoreForT::new(state)
-                    )
-                }
-            }
-        }
-        .to_tokens(&mut output);
-    }
-    output.into()
-}
-
-#[proc_macro]
-pub fn impl_hash_u64(input: TokenStream1) -> TokenStream1 {
-    let root = crate_root();
-    let hash_t = quote!(#root::Hash);
-    let hasher_t = quote!(#root::Hasher);
-
-    let input = parse_macro_input!(input as IdentsWithGenerics);
-    let mut output = TokenStream::new();
-
-    for IdentWithGenerics {
-        impl_generics,
-        ident,
-        use_generics,
-        mut where_clause,
-    } in input.punctuated
-    {
-        let where_ = fix_where(where_clause.as_mut());
-        quote! {
-            impl #impl_generics #hash_t<u64> for #ident #use_generics #where_ #where_clause
-                Self: ::core::hash::Hash,
-            {
-                #[inline]
-                fn hash<H: #hasher_t<u64>>(&self, state: &mut H) {
-                    <Self as ::core::hash::Hash>::hash(
-                        self, &mut #root::internal::WrapU64ForCore::new(state)
+                        self, &mut #root::internal::WrapHasherWriteForCore::new(state)
                     )
                 }
             }

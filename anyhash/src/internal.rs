@@ -57,16 +57,16 @@ macro_rules! impl_hasher_core_fwd {
 }
 
 #[repr(transparent)]
-pub struct WrapCoreForT<'a, H: HasherWrite>(&'a mut H);
+pub struct WrapHasherWriteForCore<'a, H: HasherWrite>(&'a mut H);
 
-impl<'a, H: HasherWrite> WrapCoreForT<'a, H> {
+impl<'a, H: HasherWrite> WrapHasherWriteForCore<'a, H> {
     #[inline(always)]
     pub fn new(hasher: &'a mut H) -> Self {
         Self(hasher)
     }
 }
 
-impl<H: HasherWrite> core::hash::Hasher for WrapCoreForT<'_, H> {
+impl<H: HasherWrite> core::hash::Hasher for WrapHasherWriteForCore<'_, H> {
     #[inline(always)]
     fn finish(&self) -> u64 {
         panic!("`core::hash::Hasher::finish` called while calculating generic hash");
@@ -76,43 +76,43 @@ impl<H: HasherWrite> core::hash::Hasher for WrapCoreForT<'_, H> {
 }
 
 #[repr(transparent)]
-pub struct WrapCoreForU64<'a, H: core::hash::Hasher>(&'a mut H);
+pub struct WrapHasherU64ForCore<H: Hasher<u64>>(H);
 
-impl<'a, H: core::hash::Hasher> WrapCoreForU64<'a, H> {
-    #[inline(always)]
-    pub fn new(hasher: &'a mut H) -> Self {
-        Self(hasher)
-    }
-}
-
-impl<H: ::core::hash::Hasher> Hasher<u64> for WrapCoreForU64<'_, H> {
-    #[inline(always)]
-    fn finish(&self) -> u64 {
-        H::finish(self.0)
-    }
-}
-
-impl<H: ::core::hash::Hasher> HasherWrite for WrapCoreForU64<'_, H> {
-    impl_hasher_core_fwd!();
-}
-
-#[repr(transparent)]
-pub struct WrapU64ForCore<H: Hasher<u64>>(H);
-
-impl<H: Hasher<u64>> WrapU64ForCore<H> {
+impl<H: Hasher<u64>> WrapHasherU64ForCore<H> {
     #[inline(always)]
     pub const fn new(hasher: H) -> Self {
         Self(hasher)
     }
 }
 
-impl<H: Hasher<u64>> ::core::hash::Hasher for WrapU64ForCore<H> {
+impl<H: Hasher<u64>> ::core::hash::Hasher for WrapHasherU64ForCore<H> {
     #[inline(always)]
     fn finish(&self) -> u64 {
         H::finish(&self.0)
     }
 
     impl_hasher_core_fwd!(&mut);
+}
+
+#[repr(transparent)]
+pub struct WrapCoreForHasherU64<'a, H: core::hash::Hasher>(&'a mut H);
+
+impl<'a, H: core::hash::Hasher> WrapCoreForHasherU64<'a, H> {
+    #[inline(always)]
+    pub fn new(hasher: &'a mut H) -> Self {
+        Self(hasher)
+    }
+}
+
+impl<H: ::core::hash::Hasher> Hasher<u64> for WrapCoreForHasherU64<'_, H> {
+    #[inline(always)]
+    fn finish(&self) -> u64 {
+        H::finish(self.0)
+    }
+}
+
+impl<H: ::core::hash::Hasher> HasherWrite for WrapCoreForHasherU64<'_, H> {
+    impl_hasher_core_fwd!();
 }
 
 #[cfg(feature = "bytemuck")]

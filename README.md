@@ -1,3 +1,3 @@
-This repository contains the [hash-t](hash-t) and [hash-t-macros](hash-t-macros) crates.
+This repository contains the [anyhash](anyhash) and [anyhash-macros](anyhash-macros) crates.
 
-See [hash-t/README.md](hash-t/README.md).
+See [anyhash/README.md](anyhash/README.md).

@@ -1,4 +1,4 @@
-use crate::{impl_hash_t, Hash, Hasher, HasherWrite};
+use crate::{impl_hash, Hash, Hasher, HasherWrite};
 
 macro_rules! impl_hasher_t_deref {
     () => {
@@ -169,14 +169,20 @@ impl<T: ?Sized + Hash> Hash for &mut T {
 impl<T: ?Sized> Hash for *const T {
     #[inline]
     fn hash<H: HasherWrite>(&self, state: &mut H) {
-        <Self as ::core::hash::Hash>::hash(self, &mut crate::internal::WrapCoreForT::new(state))
+        <Self as ::core::hash::Hash>::hash(
+            self,
+            &mut crate::internal::WrapHasherWriteForCore::new(state),
+        )
     }
 }
 
 impl<T: ?Sized> Hash for *mut T {
     #[inline]
     fn hash<H: HasherWrite>(&self, state: &mut H) {
-        <Self as ::core::hash::Hash>::hash(self, &mut crate::internal::WrapCoreForT::new(state))
+        <Self as ::core::hash::Hash>::hash(
+            self,
+            &mut crate::internal::WrapHasherWriteForCore::new(state),
+        )
     }
 }
 
@@ -265,7 +271,7 @@ mod core_impls {
         time::Duration,
     };
 
-    impl_hash_t!(Layout; TypeId);
+    impl_hash!(Layout; TypeId);
 
     impl Hash for Ordering {
         #[inline]
@@ -279,7 +285,7 @@ mod core_impls {
         fn hash<H: HasherWrite>(&self, _: &mut H) {}
     }
 
-    impl_hash_t!(impl<T> Discriminant<T>);
+    impl_hash!(impl<T> Discriminant<T>);
 
     impl<T: ?Sized + Hash> Hash for ManuallyDrop<T> {
         #[inline]
@@ -304,7 +310,7 @@ mod core_impls {
     }
 
     // RangeInclusive has private internal state
-    impl_hash_t!(impl<I: core::hash::Hash> RangeInclusive<I>);
+    impl_hash!(impl<I: core::hash::Hash> RangeInclusive<I>);
 
     impl<T: Hash> Hash for Bound<T> {
         #[inline]
@@ -339,7 +345,7 @@ mod core_impls {
         }
     }
 
-    impl_hash_t!(Location<'_>);
+    impl_hash!(Location<'_>);
 
     impl<P: Deref<Target = impl Hash>> Hash for Pin<P> {
         #[inline]
@@ -384,7 +390,7 @@ mod core_impls {
         }
     }
 
-    impl_hash_t!(Duration);
+    impl_hash!(Duration);
 
     impl_empty_hash! {
         Infallible, Error, PhantomPinned, RangeFull
@@ -489,7 +495,7 @@ mod alloc_impls {
         }
     }
 
-    impl_hash_t!(impl<T: core::hash::Hash> BTreeSet<T>);
+    impl_hash!(impl<T: core::hash::Hash> BTreeSet<T>);
 
     impl<T: Hash> Hash for LinkedList<T> {
         #[inline]
@@ -531,7 +537,7 @@ mod std_impls {
         time::{Instant, SystemTime},
     };
 
-    impl_hash_t!(
+    impl_hash!(
         OsStr;
         OsString;
         FileType;
