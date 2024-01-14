@@ -2,8 +2,12 @@
 name = "anyhash"
 version = "0.1.0"
 edition = "2021"
-authors = ["Maia <66437537+maia-s@users.noreply.github.com>"]
+authors = ["Maia S. R."]
 license = "MIT OR Apache-2.0 OR Zlib"
+description = "Traits and utilities for making hashes of any type"
+repository = "https://github.com/maia-s/anyhash"
+keywords = ["hash", "hashing", "generic"]
+categories = ["algorithms", "no-std", "no-std::no-alloc"]
 
 [features]
 std = ["alloc"]
@@ -22,7 +26,7 @@ spooky = ["bytemuck"]
 xxh64 = ["bytemuck"]
 
 [dependencies]
-anyhash-macros = { path = "../anyhash-macros" }
+anyhash-macros = { version = "0.1", path = "../anyhash-macros" }
 bnum = { version = "0.10", optional = true }
 bytemuck = { version = "1.14", features = ["min_const_generics"], optional = true }
 

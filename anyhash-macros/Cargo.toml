@@ -2,8 +2,10 @@
 name = "anyhash-macros"
 version = "0.1.0"
 edition = "2021"
-authors = ["Maia <66437537+maia-s@users.noreply.github.com>"]
+authors = ["Maia S. R."]
 license = "MIT OR Apache-2.0 OR Zlib"
+description = "Proc macros for the anyhash crate"
+repository = "https://github.com/maia-s/anyhash"
 
 [lib]
 proc-macro = true
