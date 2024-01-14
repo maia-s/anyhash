@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 use proc_macro::TokenStream as TokenStream1;
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use syn::{
     parse::{Parse, ParseStream},
@@ -19,9 +19,8 @@ fn crate_root() -> TokenStream {
 #[allow(non_snake_case)]
 pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
     let root = crate_root();
-    let hash_t = quote!(#root::Hash);
-    let hasher_t = quote!(#root::Hasher);
-    let T = Ident::new("__hash_t_T", Span::mixed_site());
+    let hash = quote!(#root::Hash);
+    let hasher_write = quote!(#root::HasherWrite);
 
     let mut input = parse_macro_input!(input as DeriveInput);
     let ident = input.ident;
@@ -37,7 +36,7 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
                     x.ident.as_ref().unwrap()
                 });
                 quote! {
-                    #( #hash_t::<#T>::hash(&self.#fields, state); )*
+                    #( #hash::hash(&self.#fields, state); )*
                 }
                 .to_tokens(&mut tokens)
             }
@@ -48,7 +47,7 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
                     Index::from(i)
                 });
                 quote! {
-                    #( #hash_t::<#T>::hash(&self.#fields, state); )*
+                    #( #hash::hash(&self.#fields, state); )*
                 }
                 .to_tokens(&mut tokens)
             }
@@ -73,8 +72,9 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
                             })
                             .collect();
                         quote! {
-                            Self::#var { #(#fields),* } => { #( #hash_t::<#T>::hash(#fields, state); )* }
-                        }.to_tokens(&mut variant_tokens);
+                            Self::#var { #(#fields),* } => { #( #hash::hash(#fields, state); )* }
+                        }
+                        .to_tokens(&mut variant_tokens);
                     }
 
                     Fields::Unnamed(x) => {
@@ -88,8 +88,9 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
                             })
                             .collect();
                         quote! {
-                            Self::#var(#(#fields),*) => { #( #hash_t::<#T>::hash(#fields, state); )* }
-                        }.to_tokens(&mut variant_tokens);
+                            Self::#var(#(#fields),*) => { #( #hash::hash(#fields, state); )* }
+                        }
+                        .to_tokens(&mut variant_tokens);
                     }
 
                     Fields::Unit => quote! {
@@ -100,7 +101,7 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
             }
 
             quote! {
-                #hash_t::<#T>::hash(&core::mem::discriminant(self), state);
+                #hash::hash(&core::mem::discriminant(self), state);
                 match self {
                     #variant_tokens
                 }
@@ -109,7 +110,7 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
         }
 
         Data::Union(_) => {
-            return Error::new(ident.span(), "can't derive `Hash<T>` for union")
+            return Error::new(ident.span(), "can't derive `Hash` for union")
                 .to_compile_error()
                 .into()
         }
@@ -128,11 +129,11 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
         wc,
     } = split_generics(&input.generics);
     quote! {
-        impl<#(#lti,)* #T #(,#tpi)* #(,#cpi)*> #hash_t<#T> for #ident<#(#ltt,)* #(#tpt,)* #(#cpt),*> #where_ #wc
-            #( #types: #hash_t<#T> ),*
+        impl<#(#lti,)* #(#tpi,)* #(#cpi,)*> #hash for #ident<#(#ltt,)* #(#tpt,)* #(#cpt),*> #where_ #wc
+            #( #types: #hash ),*
         {
             #[inline]
-            fn hash<H: #hasher_t<#T>>(&self, state: &mut H) {
+            fn hash<H: #hasher_write>(&self, state: &mut H) {
                 #tokens
             }
         }
@@ -143,7 +144,7 @@ pub fn derive_hash_t(input: TokenStream1) -> TokenStream1 {
 #[proc_macro]
 pub fn impl_core_hash(input: TokenStream1) -> TokenStream1 {
     let root = crate_root();
-    let hash_t = quote!(#root::Hash);
+    let hash = quote!(#root::Hash);
 
     let input = parse_macro_input!(input as IdentsWithGenerics);
     let mut output = TokenStream::new();
@@ -158,11 +159,11 @@ pub fn impl_core_hash(input: TokenStream1) -> TokenStream1 {
         let where_ = fix_where(where_clause.as_mut());
         quote! {
             impl #impl_generics ::core::hash::Hash for #ident #use_generics #where_ #where_clause
-                Self: #hash_t<u64>,
+                Self: #hash,
             {
                 #[inline]
                 fn hash<H: ::core::hash::Hasher>(&self, state: &mut H) {
-                    <Self as #hash_t<u64>>::hash(
+                    <Self as #hash>::hash(
                         self, &mut #root::internal::WrapCoreForU64::new(state)
                     )
                 }
@@ -275,9 +276,8 @@ pub fn impl_core_build_hasher(input: TokenStream1) -> TokenStream1 {
 #[allow(non_snake_case)]
 pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
     let root = crate_root();
-    let hash_t = quote!(#root::Hash);
-    let hasher_t = quote!(#root::Hasher);
-    let T = Ident::new("__hash_t_T", Span::mixed_site());
+    let hash = quote!(#root::Hash);
+    let hasher_write = quote!(#root::HasherWrite);
 
     let input = parse_macro_input!(input as IdentsWithGenerics);
     let mut output = TokenStream::new();
@@ -301,11 +301,11 @@ pub fn impl_hash_t(input: TokenStream1) -> TokenStream1 {
         let where_ = fix_where(where_clause.as_mut());
 
         quote! {
-            impl<#(#lti,)* #T #(,#tpi)* #(,#cpi)*> #hash_t<#T> for #ident #use_generics #where_ #where_clause
+            impl<#(#lti,)* #(#tpi,)* #(#cpi,)*> #hash for #ident #use_generics #where_ #where_clause
                 Self: ::core::hash::Hash,
             {
                 #[inline]
-                fn hash<H: #hasher_t<#T>>(&self, state: &mut H) {
+                fn hash<H: #hasher_write>(&self, state: &mut H) {
                     <Self as ::core::hash::Hash>::hash(
                         self, &mut #root::internal::WrapCoreForT::new(state)
                     )

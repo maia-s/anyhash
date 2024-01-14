@@ -13,7 +13,7 @@ The crate is `no_std` and uses no optional features by default. The following fe
 
 Optional integrations:
 
-- `bnum`: Implement [`Hash<T>`] for the `bnum` crate's types, and support them as the hash result for built-in hashers that can use them.
+- `bnum`: Implement [`Hash`] for the `bnum` crate's types, and support them as the hash result for built-in hashers that can use them.
 
 Built-in hashers:
 

@@ -367,11 +367,11 @@ mod tests {
         test::<U1024>();
     }
 
-    fn fnv1a_default_seed<T: Hash<u64>>(x: T) -> u64 {
+    fn fnv1a_default_seed<T: Hash>(x: T) -> u64 {
         Fnv1aDefaultBuildHasher::default().hash_one(x)
     }
 
-    fn fnv1a_custom_seed<T: Hash<u64>>(x: T) -> u64 {
+    fn fnv1a_custom_seed<T: Hash>(x: T) -> u64 {
         Fnv1aBuildHasher::with_seed(0x55555555_55555555).hash_one(x)
     }
 

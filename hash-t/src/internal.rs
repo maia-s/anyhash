@@ -1,7 +1,5 @@
 use crate::{Hasher, HasherWrite};
 
-use core::marker::PhantomData;
-
 macro_rules! impl_hasher_core_fwd_writes {
     ([] $($t:ty: $fn:ident),* $(,)?) => { $(
         #[inline(always)]
@@ -59,16 +57,16 @@ macro_rules! impl_hasher_core_fwd {
 }
 
 #[repr(transparent)]
-pub struct WrapCoreForT<'a, T, H: Hasher<T>>(&'a mut H, PhantomData<fn() -> T>);
+pub struct WrapCoreForT<'a, H: HasherWrite>(&'a mut H);
 
-impl<'a, T, H: Hasher<T>> WrapCoreForT<'a, T, H> {
+impl<'a, H: HasherWrite> WrapCoreForT<'a, H> {
     #[inline(always)]
     pub fn new(hasher: &'a mut H) -> Self {
-        Self(hasher, PhantomData)
+        Self(hasher)
     }
 }
 
-impl<T, H: Hasher<T>> core::hash::Hasher for WrapCoreForT<'_, T, H> {
+impl<H: HasherWrite> core::hash::Hasher for WrapCoreForT<'_, H> {
     #[inline(always)]
     fn finish(&self) -> u64 {
         panic!("`core::hash::Hasher::finish` called while calculating generic hash");

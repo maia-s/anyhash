@@ -14,7 +14,7 @@ extern crate std;
 
 use core::{fmt::Debug, marker::PhantomData};
 
-/// Derive macro for [`Hash<T>`].
+/// Derive macro for [`Hash`].
 pub use hash_t_macros::HashT;
 
 /// Implement `::core::Hash::Hash` for types that already implement [`Hash<u64>`].
@@ -181,15 +181,14 @@ pub use hash_t_macros::impl_core_hasher;
 /// ```
 pub use hash_t_macros::impl_core_build_hasher;
 
-/// Implement [`Hash<T>`] for types that already implement `::core::hash::Hash`.
+/// Implement [`Hash`] for types that already implement `::core::hash::Hash`.
 /// This will panic if `::core::hash::Hasher::finish` is called during hashing.
-/// You can use [`impl_hash_u64`] instead to only implement [`Hash<u64>`].
 ///
 /// ```
 /// # use hash_t::*;
 /// # #[derive(Hash)]
 /// # struct MyType;
-/// // Implements `Hash<T>` for `MyType`.
+/// // Implements `Hash` for `MyType`.
 /// impl_hash_t!(MyType);
 /// ```
 ///
@@ -199,7 +198,7 @@ pub use hash_t_macros::impl_core_build_hasher;
 /// # use hash_t::*;
 /// # #[derive(Hash)]
 /// # struct MyOtherType<T>(T);
-/// // Implements `Hash<T>` for `MyOtherType<u32>` and `MyOtherType<u64>`.
+/// // Implements `Hash` for `MyOtherType<u32>` and `MyOtherType<u64>`.
 /// impl_hash_t!(MyOtherType<u32>; MyOtherType<u64>);
 /// ```
 ///
@@ -212,52 +211,13 @@ pub use hash_t_macros::impl_core_build_hasher;
 /// # struct MyType<T>(T);
 /// # #[derive(Hash)]
 /// # struct MyOtherType<'a, T, U, V>(core::marker::PhantomData<&'a (T, U, V)>);
-/// // Implements `Hash<T>` for `MyType` and `MyOtherType`.
+/// // Implements `Hash` for `MyType` and `MyOtherType`.
 /// impl_hash_t! {
 ///     impl<T> MyType<T>;
 ///     impl<'a, T, U: 'a> MyOtherType<'a, T, u32, U> where Self: Display;
 /// }
 /// ```
 pub use hash_t_macros::impl_hash_t;
-
-/// Implement [`Hash<u64>`] for types that already implement `::core::hash::Hash`.
-/// If you know the hashed type doesn't call `::core::hash::Hasher::finish` during hashing,
-/// you can use [`impl_hash_t`] instead to implement [`Hash<T>`] for all `T`
-///
-/// ```
-/// # use hash_t::*;
-/// # #[derive(Hash)]
-/// # struct MyType;
-/// // Implements `Hash<u64>` for `MyType`.
-/// impl_hash_u64!(MyType);
-/// ```
-///
-/// You can pass multiple types as arguments. Types are separated by `;`.
-///
-/// ```
-/// # use hash_t::*;
-/// # #[derive(Hash)]
-/// # struct MyOtherType<T>(T);
-/// // Implements `Hash<u64>` for `MyOtherType<u32>` and `MyOtherType<u64>`.
-/// impl_hash_u64!(MyOtherType<u32>; MyOtherType<u64>);
-/// ```
-///
-/// You can also pass generic types using the `impl` keyword.
-///
-/// ```
-/// # use hash_t::*;
-/// # use core::fmt::Display;
-/// # #[derive(Hash)]
-/// # struct MyType<T>(T);
-/// # #[derive(Hash)]
-/// # struct MyOtherType<'a, T, U, V>(core::marker::PhantomData<&'a (T, U, V)>);
-/// // Implements `Hash<u64>` for `MyType` and `MyOtherType`.
-/// impl_hash_u64! {
-///     impl<T> MyType<T>;
-///     impl<'a, T, U: 'a> MyOtherType<'a, T, u32, U> where Self: Display;
-/// }
-/// ```
-pub use hash_t_macros::impl_hash_u64;
 
 macro_rules! define_writes_for_hasher {
     (native endian) => {
@@ -364,13 +324,13 @@ pub mod internal;
 mod impls;
 
 /// A hashable type.
-pub trait Hash<T> {
-    /// Feeds this value into the given [`Hasher`].
-    fn hash<H: Hasher<T>>(&self, state: &mut H);
+pub trait Hash {
+    /// Feeds this value into the given [`HasherWrite`].
+    fn hash<H: HasherWrite>(&self, state: &mut H);
 
-    /// Feeds a slice of this type into the given [`Hasher`].
+    /// Feeds a slice of this type into the given [`HasherWrite`].
     #[inline]
-    fn hash_slice<H: Hasher<T>>(data: &[Self], state: &mut H)
+    fn hash_slice<H: HasherWrite>(data: &[Self], state: &mut H)
     where
         Self: Sized,
     {
@@ -381,6 +341,7 @@ pub trait Hash<T> {
 }
 
 /// A trait for hashing an arbitrary stream of bytes.
+/// The write methods are defined in the [`HasherWrite`] trait.
 pub trait Hasher<T>: HasherWrite {
     /// Returns the hash value for the values written so far.
     fn finish(&self) -> T;
@@ -404,7 +365,7 @@ pub trait BuildHasher<T> {
 
     /// Calculates the hash of a single value.
     #[inline]
-    fn hash_one<U: Hash<T>>(&self, x: U) -> T {
+    fn hash_one<U: Hash>(&self, x: U) -> T {
         let mut hasher = self.build_hasher();
         x.hash(&mut hasher);
         hasher.finish()
@@ -645,10 +606,10 @@ mod tests {
 
     pub struct RawBytes<'a>(pub &'a [u8]);
 
-    impl<T> Hash<T> for RawBytes<'_> {
+    impl Hash for RawBytes<'_> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            Hash::<T>::hash_slice(self.0, state)
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
+            Hash::hash_slice(self.0, state)
         }
     }
 }

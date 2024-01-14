@@ -3,7 +3,7 @@ use crate::{impl_hash_t, Hash, Hasher, HasherWrite};
 macro_rules! impl_hasher_t_deref {
     () => {
         #[inline]
-        fn finish(&self) -> T {
+        fn finish(&self) -> HT {
             (**self).finish()
         }
     };
@@ -63,40 +63,38 @@ macro_rules! impl_hasher_deref {
 
 macro_rules! impl_empty_hash {
     ($($t:ty),* $(,)?) => { $(
-        impl<T> Hash<T> for $t {
+        impl Hash for $t {
             #[inline]
-            fn hash<H: Hasher<T>>(&self, _: &mut H) {}
+            fn hash<H: HasherWrite>(&self, _: &mut H) {}
         }
     )* };
 }
 
 macro_rules! impl_hash_from_method {
-    ([$T:ident] $($m:ident { $($t:ident $(<
-        $($gen:ident $(: $con0:path $(: $con:path)*)?),+
-    >)?),* $(,)? })*) => { $($(
-        impl<$T $($(, $gen $(: $con0 $(+ $con)*)?)*)?> Hash<$T> for $t $(<$($gen),*>)? {
+    ($($m:ident { $($t:ty),* $(,)? })*) => { $($(
+        impl Hash for $t {
             #[inline]
-            fn hash<H: Hasher<$T>>(&self, state: &mut H) {
-                Hash::<$T>::hash(&self.$m(), state)
+            fn hash<H: HasherWrite>(&self, state: &mut H) {
+                Hash::hash(&self.$m(), state)
             }
         }
     )*)* };
 }
 
 macro_rules! impl_hash_from_field {
-    ([$T:ident] $($n:tt { $($t:ident $(<
+    ($($n:tt { $($t:ident $(<
         $($gen:ident $(: $con0:path $(: $con:path)*)?),+
     >)?),* $(,)? })*) => { $($(
-        impl<$T $($(, $gen $(: $con0 $(+ $con)*)?)*)?> Hash<$T> for $t $(<$($gen),*>)? {
+        impl<$($($gen $(: $con0 $(+ $con)*)?),*)?> Hash for $t $(<$($gen),*>)? {
             #[inline]
-            fn hash<H: Hasher<$T>>(&self, state: &mut H) {
-                Hash::<$T>::hash(&self.$n, state)
+            fn hash<H: HasherWrite>(&self, state: &mut H) {
+                Hash::hash(&self.$n, state)
             }
         }
     )*)* };
 }
 
-impl<T, H: Hasher<T> + ?Sized> Hasher<T> for &mut H {
+impl<HT, H: Hasher<HT> + ?Sized> Hasher<HT> for &mut H {
     impl_hasher_t_deref!();
 }
 
@@ -106,9 +104,9 @@ impl<H: HasherWrite + ?Sized> HasherWrite for &mut H {
 
 macro_rules! impl_hash_prim {
     ($($t:ty $(as $u:ty)?: $ne:ident),* $(,)?) => { $(
-        impl<T> $crate::Hash<T> for $t {
+        impl $crate::Hash for $t {
             #[inline]
-            fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            fn hash<H: HasherWrite>(&self, state: &mut H) {
                 state.$ne(*self $(as $u)?)
             }
         }
@@ -132,77 +130,77 @@ impl_hash_prim! {
     char as u32: write_u32,
 }
 
-impl<T> Hash<T> for str {
+impl Hash for str {
     #[inline]
-    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+    fn hash<H: HasherWrite>(&self, state: &mut H) {
         state.write_str(self)
     }
 }
 
-impl<T, U: Hash<T>> Hash<T> for [U] {
+impl<T: Hash> Hash for [T] {
     #[inline]
-    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+    fn hash<H: HasherWrite>(&self, state: &mut H) {
         state.write_length_prefix(self.len());
-        Hash::<T>::hash_slice(self, state);
+        Hash::hash_slice(self, state);
     }
 }
 
-impl<T, U: Hash<T>, const N: usize> Hash<T> for [U; N] {
+impl<T: Hash, const N: usize> Hash for [T; N] {
     #[inline]
-    fn hash<H: Hasher<T>>(&self, state: &mut H) {
-        Hash::<T>::hash(&self[..], state);
+    fn hash<H: HasherWrite>(&self, state: &mut H) {
+        Hash::hash(&self[..], state);
     }
 }
 
-impl<T, U: ?Sized + Hash<T>> Hash<T> for &U {
+impl<T: ?Sized + Hash> Hash for &T {
     #[inline]
-    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+    fn hash<H: HasherWrite>(&self, state: &mut H) {
         (**self).hash(state);
     }
 }
 
-impl<T, U: ?Sized + Hash<T>> Hash<T> for &mut U {
+impl<T: ?Sized + Hash> Hash for &mut T {
     #[inline]
-    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+    fn hash<H: HasherWrite>(&self, state: &mut H) {
         (**self).hash(state);
     }
 }
 
-impl<T, U: ?Sized> Hash<T> for *const U {
+impl<T: ?Sized> Hash for *const T {
     #[inline]
-    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+    fn hash<H: HasherWrite>(&self, state: &mut H) {
         <Self as ::core::hash::Hash>::hash(self, &mut crate::internal::WrapCoreForT::new(state))
     }
 }
 
-impl<T, U: ?Sized> Hash<T> for *mut U {
+impl<T: ?Sized> Hash for *mut T {
     #[inline]
-    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+    fn hash<H: HasherWrite>(&self, state: &mut H) {
         <Self as ::core::hash::Hash>::hash(self, &mut crate::internal::WrapCoreForT::new(state))
     }
 }
 
 macro_rules! impl_hash_tuple_and_fn {
     ($(($($i:ident),+ $(,)?)),* $(,)?) => { $(
-        impl<T, $($i: Hash<T>),* + ?Sized> Hash<T> for ($($i,)*) {
+        impl<$($i: Hash),* + ?Sized> Hash for ($($i,)*) {
             #[inline]
-            fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            fn hash<H: HasherWrite>(&self, state: &mut H) {
                 #[allow(non_snake_case)]
                 let ($($i,)*) = self;
                 $( $i.hash(state); )*
             }
         }
 
-        impl<T, R $(, $i)*> Hash<T> for fn($($i),*) -> R {
+        impl<R $(, $i)*> Hash for fn($($i),*) -> R {
             #[inline]
-            fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            fn hash<H: HasherWrite>(&self, state: &mut H) {
                 (*self as usize).hash(state);
             }
         }
 
-        impl<T, R $(, $i)*> Hash<T> for extern "C" fn($($i),*) -> R {
+        impl<R $(, $i)*> Hash for extern "C" fn($($i),*) -> R {
             #[inline]
-            fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            fn hash<H: HasherWrite>(&self, state: &mut H) {
                 (*self as usize).hash(state);
             }
         }
@@ -211,16 +209,16 @@ macro_rules! impl_hash_tuple_and_fn {
 
 impl_empty_hash!(());
 
-impl<T, R> Hash<T> for fn() -> R {
+impl<R> Hash for fn() -> R {
     #[inline]
-    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+    fn hash<H: HasherWrite>(&self, state: &mut H) {
         (*self as usize).hash(state);
     }
 }
 
-impl<T, R> Hash<T> for extern "C" fn() -> R {
+impl<R> Hash for extern "C" fn() -> R {
     #[inline]
-    fn hash<H: Hasher<T>>(&self, state: &mut H) {
+    fn hash<H: HasherWrite>(&self, state: &mut H) {
         (*self as usize).hash(state);
     }
 }
@@ -269,118 +267,118 @@ mod core_impls {
 
     impl_hash_t!(Layout; TypeId);
 
-    impl<T> Hash<T> for Ordering {
+    impl Hash for Ordering {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             (*self as i8).hash(state)
         }
     }
 
-    impl<T, U: ?Sized> Hash<T> for PhantomData<U> {
+    impl<T: ?Sized> Hash for PhantomData<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, _: &mut H) {}
+        fn hash<H: HasherWrite>(&self, _: &mut H) {}
     }
 
-    impl_hash_t!(impl<U> Discriminant<U>);
+    impl_hash_t!(impl<T> Discriminant<T>);
 
-    impl<T, U: ?Sized + Hash<T>> Hash<T> for ManuallyDrop<U> {
+    impl<T: ?Sized + Hash> Hash for ManuallyDrop<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            Hash::<T>::hash(
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
+            Hash::hash(
                 unsafe {
                     // # Safety
                     // `ManuallyDrop<T>` is guaranteed to have the same layout and bit validity as T
-                    transmute::<&Self, &U>(self)
+                    transmute::<&Self, &T>(self)
                 },
                 state,
             );
         }
     }
 
-    impl<T, I: Hash<T>> Hash<T> for Range<I> {
+    impl<I: Hash> Hash for Range<I> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            Hash::<T>::hash(&self.start, state);
-            Hash::<T>::hash(&self.end, state);
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
+            Hash::hash(&self.start, state);
+            Hash::hash(&self.end, state);
         }
     }
 
     // RangeInclusive has private internal state
     impl_hash_t!(impl<I: core::hash::Hash> RangeInclusive<I>);
 
-    impl<T, U: Hash<T>> Hash<T> for Bound<U> {
+    impl<T: Hash> Hash for Bound<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             discriminant(self).hash(state);
             match self {
-                Bound::Included(x) | Bound::Excluded(x) => Hash::<T>::hash(x, state),
+                Bound::Included(x) | Bound::Excluded(x) => Hash::hash(x, state),
                 Bound::Unbounded => (),
             }
         }
     }
 
-    impl<T, B: Hash<T>, C: Hash<T>> Hash<T> for ControlFlow<B, C> {
+    impl<B: Hash, C: Hash> Hash for ControlFlow<B, C> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             discriminant(self).hash(state);
             match self {
-                ControlFlow::Continue(c) => Hash::<T>::hash(c, state),
-                ControlFlow::Break(b) => Hash::<T>::hash(b, state),
+                ControlFlow::Continue(c) => Hash::hash(c, state),
+                ControlFlow::Break(b) => Hash::hash(b, state),
             }
         }
     }
 
-    impl<T, U: Hash<T>> Hash<T> for Option<U> {
+    impl<T: Hash> Hash for Option<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             discriminant(self).hash(state);
             match self {
                 None => (),
-                Some(x) => Hash::<T>::hash(x, state),
+                Some(x) => Hash::hash(x, state),
             }
         }
     }
 
     impl_hash_t!(Location<'_>);
 
-    impl<T, P: Deref<Target = impl Hash<T>>> Hash<T> for Pin<P> {
+    impl<P: Deref<Target = impl Hash>> Hash for Pin<P> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             P::Target::hash(self, state)
         }
     }
 
-    impl<T, U: ?Sized + Hash<T>> Hash<T> for NonNull<U> {
+    impl<T: ?Sized + Hash> Hash for NonNull<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             self.as_ptr().hash(state);
         }
     }
 
-    impl<T, U: Hash<T>, E: Hash<T>> Hash<T> for Result<U, E> {
+    impl<T: Hash, E: Hash> Hash for Result<T, E> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             discriminant(self).hash(state);
             match self {
-                Ok(x) => Hash::<T>::hash(x, state),
-                Err(x) => Hash::<T>::hash(x, state),
+                Ok(x) => Hash::hash(x, state),
+                Err(x) => Hash::hash(x, state),
             }
         }
     }
 
-    impl<T> Hash<T> for atomic::Ordering {
+    impl Hash for atomic::Ordering {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             discriminant(self).hash(state);
         }
     }
 
-    impl<T, U: Hash<T>> Hash<T> for Poll<U> {
+    impl<T: Hash> Hash for Poll<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             discriminant(self).hash(state);
             match self {
-                Poll::Ready(x) => Hash::<T>::hash(x, state),
+                Poll::Ready(x) => Hash::hash(x, state),
                 Poll::Pending => (),
             }
         }
@@ -393,7 +391,6 @@ mod core_impls {
     }
 
     impl_hash_from_method! {
-        [T]
         get {
             NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize,
             NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize,
@@ -404,17 +401,16 @@ mod core_impls {
     }
 
     impl_hash_from_field! {
-        [T]
         0 {
-            Reverse<U: Hash<T>>,
-            Saturating<U: Hash<T>>, Wrapping<U: Hash<T>>,
+            Reverse<T: Hash>,
+            Saturating<T: Hash>, Wrapping<T: Hash>,
         }
         start {
-            RangeFrom<I: Hash<T>>,
+            RangeFrom<I: Hash>,
         }
         end {
-            RangeTo<I: Hash<T>>,
-            RangeToInclusive<I: Hash<T>>,
+            RangeTo<I: Hash>,
+            RangeToInclusive<I: Hash>,
         }
     }
 }
@@ -433,59 +429,59 @@ mod alloc_impls {
         vec::Vec,
     };
 
-    impl<T, B: ?Sized + Hash<T> + ToOwned> Hash<T> for Cow<'_, B> {
+    impl<B: ?Sized + Hash + ToOwned> Hash for Cow<'_, B> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            Hash::<T>::hash(&**self, state)
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
+            Hash::hash(&**self, state)
         }
     }
 
-    impl<T, U: ?Sized + Hash<T>> Hash<T> for Box<U> {
+    impl<T: ?Sized + Hash> Hash for Box<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             (**self).hash(state)
         }
     }
 
-    impl<T, U: ?Sized + Hasher<T>> Hasher<T> for Box<U> {
+    impl<HT, T: ?Sized + Hasher<HT>> Hasher<HT> for Box<T> {
         impl_hasher_t_deref!();
     }
 
-    impl<U: ?Sized + HasherWrite> HasherWrite for Box<U> {
+    impl<T: ?Sized + HasherWrite> HasherWrite for Box<T> {
         impl_hasher_deref!();
     }
 
-    impl<T, U: ?Sized + Hash<T>> Hash<T> for Rc<U> {
+    impl<T: ?Sized + Hash> Hash for Rc<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             (**self).hash(state)
         }
     }
 
-    impl<T, U: ?Sized + Hash<T>> Hash<T> for Arc<U> {
+    impl<T: ?Sized + Hash> Hash for Arc<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             (**self).hash(state)
         }
     }
 
-    impl<T> Hash<T> for String {
+    impl Hash for String {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             (**self).hash(state)
         }
     }
 
-    impl<T, U: Hash<T>> Hash<T> for Vec<U> {
+    impl<T: Hash> Hash for Vec<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             (**self).hash(state)
         }
     }
 
-    impl<T, K: Hash<T>, V: Hash<T>> Hash<T> for BTreeMap<K, V> {
+    impl<K: Hash, V: Hash> Hash for BTreeMap<K, V> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             state.write_length_prefix(self.len());
             for item in self {
                 item.hash(state);
@@ -495,9 +491,9 @@ mod alloc_impls {
 
     impl_hash_t!(impl<T: core::hash::Hash> BTreeSet<T>);
 
-    impl<T, U: Hash<T>> Hash<T> for LinkedList<U> {
+    impl<T: Hash> Hash for LinkedList<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             state.write_length_prefix(self.len());
             for item in self {
                 item.hash(state);
@@ -505,9 +501,9 @@ mod alloc_impls {
         }
     }
 
-    impl<T, U: Hash<T>> Hash<T> for VecDeque<U> {
+    impl<T: Hash> Hash for VecDeque<T> {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
             state.write_length_prefix(self.len());
             for item in self {
                 item.hash(state);
@@ -515,10 +511,10 @@ mod alloc_impls {
         }
     }
 
-    impl<T> Hash<T> for CString {
+    impl Hash for CString {
         #[inline]
-        fn hash<H: Hasher<T>>(&self, state: &mut H) {
-            Hash::<T>::hash(&**self, state);
+        fn hash<H: HasherWrite>(&self, state: &mut H) {
+            Hash::hash(&**self, state);
         }
     }
 }
@@ -564,8 +560,8 @@ mod bnum_impls {
 
     macro_rules! impl_buint {
         ($($id:ident),*) => { $(
-            impl<T, const N: usize> Hash<T> for $id<N> {
-                fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            impl<const N: usize> Hash for $id<N> {
+                fn hash<H: HasherWrite>(&self, state: &mut H) {
                     self.digits().hash(state)
                 }
             }
@@ -574,8 +570,8 @@ mod bnum_impls {
 
     macro_rules! impl_bint {
         ($($id:ident),*) => { $(
-            impl<T, const N: usize> Hash<T> for $id<N> {
-                fn hash<H: Hasher<T>>(&self, state: &mut H) {
+            impl<const N: usize> Hash for $id<N> {
+                fn hash<H: HasherWrite>(&self, state: &mut H) {
                     self.to_bits().hash(state)
                 }
             }

@@ -225,11 +225,11 @@ mod tests {
     use super::*;
     use crate::{BuildHasher, Hash};
 
-    fn default_seed<T: Hash<u64>>(x: T) -> u64 {
+    fn default_seed<T: Hash>(x: T) -> u64 {
         Xxh64DefaultBuildHasher.hash_one(x)
     }
 
-    fn custom_seed<T: Hash<u64>>(x: T) -> u64 {
+    fn custom_seed<T: Hash>(x: T) -> u64 {
         Xxh64BuildHasher::with_seed(0x55555555_55555555).hash_one(x)
     }
 
