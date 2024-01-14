@@ -376,6 +376,8 @@ pub trait BuildHasher<T> {
 /// and Default.
 pub struct BuildHasherDefault<H>(PhantomData<fn() -> H>);
 
+impl_core_build_hasher!(impl<H> BuildHasherDefault<H>);
+
 impl<H> BuildHasherDefault<H> {
     /// Create a new `BuildHasherDefault`.
     pub const fn new() -> Self {

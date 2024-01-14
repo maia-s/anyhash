@@ -8,7 +8,7 @@ use crate::{
     BuildHasher, BuildHasherDefault, EndianIndependentAlgorithm, Hasher, HasherWrite,
 };
 
-impl_core_build_hasher!(Xxh64BuildHasher; Xxh64BuildHasherDefault);
+impl_core_build_hasher!(Xxh64BuildHasher);
 impl_core_hasher!(Xxh64);
 
 /// [`BuildHasher`] implementation for the [`Xxh64`] hasher.
