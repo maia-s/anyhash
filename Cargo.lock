@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "anyhash"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhash-macros",
  "bnum",
@@ -22,9 +22,9 @@ dependencies = [
 
 [[package]]
 name = "bnum"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56953345e39537a3e18bdaeba4cb0c58a78c1f61f361dc0fa7c5c7340ae87c5f"
+checksum = "3e31ea183f6ee62ac8b8a8cf7feddd766317adfb13ff469de57ce033efd6a790"
 
 [[package]]
 name = "bytemuck"

@@ -1,6 +1,6 @@
 [package]
 name = "anyhash"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Maia S. R."]
 license = "MIT OR Apache-2.0 OR Zlib"
@@ -28,7 +28,7 @@ xxh64 = ["bytemuck"]
 
 [dependencies]
 anyhash-macros = { version = "0.1", path = "../anyhash-macros" }
-bnum = { version = "0.10", optional = true }
+bnum = { version = "0.11", optional = true }
 bytemuck = { version = "1.14", features = ["min_const_generics"], optional = true }
 
 [package.metadata.docs.rs]
