@@ -338,7 +338,7 @@ mod tests {
     use core::any::type_name;
 
     use super::*;
-    use crate::{tests::RawBytes, BuildHasher, Hash};
+    use crate::{tests::RawBytes, Hash};
 
     #[test]
     fn fnv0() {

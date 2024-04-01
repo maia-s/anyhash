@@ -205,7 +205,7 @@ impl Hasher<u64> for Xxh64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{BuildHasher, Hash};
+    use crate::Hash;
 
     fn default_seed<T: Hash>(x: T) -> u64 {
         Xxh64BuildHasherDefault::new().hash_one(x)

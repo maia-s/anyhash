@@ -86,6 +86,13 @@ impl<V: Version> SpookyVBuildHasher<V> {
     }
 }
 
+impl<V: Version> Default for SpookyVBuildHasher<V> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<V: Version> BuildHasher<u32> for SpookyVBuildHasher<V> {
     type Hasher = SpookyV<V>;
 
