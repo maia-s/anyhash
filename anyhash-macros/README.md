@@ -1,1 +1,1 @@
-This crate provides proc macros for the `anyhash` crate. Don't use this directly.
+# This repository has moved to https://codeberg.org/maia/anyhash-rs

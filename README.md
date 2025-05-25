@@ -1,3 +1,1 @@
-This repository contains the [anyhash](anyhash) and [anyhash-macros](anyhash-macros) crates.
-
-[Documentation at docs.rs](https://docs.rs/anyhash/)
+# This repository has moved to https://codeberg.org/maia/anyhash-rs
